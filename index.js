@@ -17,7 +17,6 @@ import {
 import fetch from "node-fetch";
 import fs from "fs";
 import "dotenv/config";
-import { attachSecurityEngine } from "./src/security/engine.js";
 
 // ========= CONFIG =========
 const OWNER_ID = "1217373421504041000";
@@ -54,18 +53,9 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildEmojisAndStickers,
-    // Thêm cho Mia Security Engine. GuildMembers là PRIVILEGED intent —
-    // phải tự bật ở Discord Developer Portal > Bot > "Server Members Intent",
-    // nếu không bot sẽ không login được (lỗi "Used disallowed intents").
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildModeration,
-    GatewayIntentBits.GuildWebhooks
+    GatewayIntentBits.GuildEmojisAndStickers
   ]
 });
-
-// ========= MIA SECURITY ENGINE =========
-const security = attachSecurityEngine(client, { ownerId: OWNER_ID });
 
 // ========= MEMORY =========
 let memory = {};
@@ -355,8 +345,6 @@ const commands = [
     .setDescription("Xem trạng thái")
 ].map(c => c.toJSON());
 
-commands.push(security.commandJSON);
-
 // ========= REGISTER =========
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 await rest.put(
@@ -376,10 +364,6 @@ client.once("ready", () => {
 // ========= INTERACTION =========
 client.on("interactionCreate", async interaction => {
   if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "security") {
-      await security.handleInteraction(interaction);
-      return;
-    }
     await handleSlashCommand(interaction);
     return;
   }
@@ -546,13 +530,6 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
 client.on("messageCreate", async msg => {
   if (msg.author.bot) return;
 
-  // ========= MIA SECURITY ENGINE — quét spam/flood/link/mention trước mọi logic khác =========
-  const blockedBySecurity = await security.scanMessage(msg).catch(err => {
-    console.error("SECURITY_SCAN_ERROR:", err);
-    return false;
-  });
-  if (blockedBySecurity) return;
-
 if (msg.content === "?listsrvr") {
 
     if (msg.author.id !== OWNER_ID) {
@@ -637,29 +614,7 @@ if (msg.content.startsWith("?svinfor")) {
   await guild.leave();
   return msg.reply(`👋 Đã rời server: ${name}`);
   }
-
-  // ========= ANXIN =========
-  if (msg.content.toLowerCase().trim() === "anxin") {
-    const embed = new EmbedBuilder()
-      .setColor("#00ff99")
-      .setTitle("💸 HYPER ANXIN")
-      .setDescription("Chọn QR để cho bố em cốc cà phê nè hihi!")
-      .setThumbnail("https://media.tenor.com/8E5qF5LhY2kAAAAi/money.gif");
-
-    const button = new ButtonBuilder()
-      .setCustomId("choose_qr")
-      .setLabel("Chọn mã")
-      .setStyle(ButtonStyle.Primary);
-
-    const row = new ActionRowBuilder().addComponents(button);
-
-    await msg.reply({
-      embeds: [embed],
-      components: [row]
-    });
-    return;
-  }
-
+   
   if (!msg.mentions.has(client.user)) return;
   // ========?say================
   
@@ -746,6 +701,31 @@ const finalReply = stripThink(reply || "Lag.") || "Lag.";
 
   console.error(err);
   msg.reply("🥺 Uii... Mia xin lỗi cậu nhiều lắm...Hình như bố của Mia hết tiền nuôi Mia rồi nên Mia tạm thời không nói chuyện tiếp được á... 😭Nếu cậu thương Mia thì có thể ủng hộ bố của Mia một ly trà sữa ☕ hoặc một chút chi phí duy trì để Mia được quay lại trò chuyện với cậu nha! 💖 Dù có hay không thì Mia cũng cảm ơn cậu rất nhiều. Mia sẽ ngoan ngoãn đợi bố nạp tiền rồi quay lại nè! 🥹🌸");
+  }
+});
+
+// ========= ANXIN =========
+client.on("messageCreate", async msg => {
+  if (msg.author.bot) return;
+
+  if (msg.content.toLowerCase().trim() === "anxin") {
+    const embed = new EmbedBuilder()
+      .setColor("#00ff99")
+      .setTitle("💸 HYPER ANXIN")
+      .setDescription("Chọn QR để cho bố em cốc cà phê nè hihi!")
+      .setThumbnail("https://media.tenor.com/8E5qF5LhY2kAAAAi/money.gif");
+
+    const button = new ButtonBuilder()
+      .setCustomId("choose_qr")
+      .setLabel("Chọn mã")
+      .setStyle(ButtonStyle.Primary);
+
+    const row = new ActionRowBuilder().addComponents(button);
+
+    await msg.reply({
+      embeds: [embed],
+      components: [row]
+    });
   }
 });
 
