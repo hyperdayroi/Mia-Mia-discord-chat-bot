@@ -71,11 +71,14 @@ function pushHistory(conversationId, role, content) {
 }
 
 async function generateLine(conversationId, instruction) {
+  // Lưu ý: KHÔNG được để messages chỉ toàn role "system" — nhiều upstream (kể cả model
+  // đang dùng) sẽ từ chối request kiểu đó (lỗi "Yêu cầu đã bị upstream từ chối").
+  // Vì vậy instruction (chỉ dẫn nội bộ) phải là "user" và luôn đứng cuối cùng.
   const messages = [
     { role: "system", content: persona.systemPrompt(null, null) },
     { role: "system", content: getFamilyContextMessage() },
-    { role: "system", content: instruction },
-    ...getHistory(conversationId)
+    ...getHistory(conversationId),
+    { role: "user", content: instruction }
   ];
   const raw = await callChatModel(messages);
   return stripThink(raw || "").trim();
