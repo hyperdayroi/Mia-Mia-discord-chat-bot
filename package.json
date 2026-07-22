@@ -1,10 +1,10 @@
 {
-  "name": "mia-bot",
-  "version": "1.0.0",
+  "name": "hyper-family-bots",
+  "version": "2.0.0",
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
     "discord.js": "^14.21.0",
