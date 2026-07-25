@@ -56,23 +56,43 @@ async function generateGreeting(kind) {
 async function sendGreeting(kind) {
   try {
     const text = await generateGreeting(kind);
-    if (!text) return;
+    if (!text) return { ok: false, reason: "AI không trả về nội dung" };
 
     // Ping thật (@mention) chứ không chỉ nói "bố ơi" bằng chữ.
     const message = `<@${OWNER_ID}> ${text}`;
 
     const channels = getAllHomeChannels();
+    let posted = false;
     if (channels.length) {
-      await Promise.all(channels.map(channelId => postToChannel(channelId, message)));
+      const results = await Promise.all(channels.map(channelId => postToChannel(channelId, message)));
+      posted = results.some(Boolean);
     } else {
       // Chưa server nào dùng /setchannel -> fallback về kênh family-chat chung (nếu có).
-      await postToFamilyChannel(message);
+      posted = await postToFamilyChannel(message);
+    }
+
+    if (!posted) {
+      return { ok: false, reason: "Không tìm được kênh nào để đăng (chưa /setchannel và chưa FAMILY_CHAT_CHANNEL_ID)" };
     }
 
     addFamilyEvent(`${persona.displayName} gửi lời chào ${kind === "morning" ? "buổi sáng" : "ngủ ngon"}: ${text}`);
+    return { ok: true };
   } catch (err) {
     console.error("FAMILY_GREETING_ERROR:", err.message || err);
+    return { ok: false, reason: err.message || String(err) };
   }
+}
+
+// Dùng cho lệnh test thủ công (?testgreeting) — bỏ qua mọi điều kiện giờ/phiên,
+// gửi ngay lập tức để kiểm tra xem lỗi nằm ở phần lên lịch hay phần gửi tin.
+export async function sendGreetingNow(kind) {
+  return sendGreeting(kind);
+}
+
+// Cho lệnh debug xem thử hiện tại tính giờ/phiên ra sao.
+export function debugScheduleInfo() {
+  const { hour, minute, dateKey } = getTimeInTimezone();
+  return { hour, minute, dateKey, todaysSender: pickTodaySender() };
 }
 
 export function scheduleGreetings() {
