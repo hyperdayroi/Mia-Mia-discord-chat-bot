@@ -9,11 +9,42 @@ import { callChatModel } from "../core/aiClient.js";
 import { stripThink, splitMessage } from "../core/text.js";
 import { getFamilyContextMessage } from "../family/context.js";
 import { triggerConversationNow } from "../family/conversationManager.js";
+import { sendGreetingNow, debugScheduleInfo } from "../family/greetings.js";
 
 export function registerMessageHandlers(client) {
   // ========= MENTION CHAT + OWNER TEXT COMMANDS =========
   client.on("messageCreate", async msg => {
     if (msg.author.bot) return;
+
+    // ============ ?testgreeting <morning|night> — test gửi lời chào ngay, bỏ qua giờ/phiên ============
+    if (msg.content.startsWith("?testgreeting")) {
+      if (msg.author.id !== OWNER_ID) {
+        return msg.reply("❌ Chỉ bố mới dùng được.");
+      }
+
+      const kind = msg.content.split(" ")[1] === "morning" ? "morning" : "night";
+      await msg.reply(`⏳ Đang test gửi lời chào "${kind}" ngay (bỏ qua kiểm tra giờ/phiên)...`);
+
+      const result = await sendGreetingNow(kind);
+      if (result.ok) {
+        return msg.reply("✅ Gửi thành công.");
+      }
+      return msg.reply(`❌ Gửi thất bại: ${result.reason}`);
+    }
+
+    // ============ ?greetinfo — xem hiện tại tính giờ/phiên ra sao ============
+    if (msg.content === "?greetinfo") {
+      if (msg.author.id !== OWNER_ID) {
+        return msg.reply("❌ Chỉ bố mới dùng được.");
+      }
+
+      const info = debugScheduleInfo();
+      return msg.reply(
+`🕐 Giờ hiện tại (${info.dateKey}): ${info.hour}:${String(info.minute).padStart(2, "0")}
+📅 Hôm nay tới phiên: **${info.todaysSender}**
+🤖 Bot này là: **${persona.key}** ${info.todaysSender === persona.key ? "(ĐÚNG phiên hôm nay)" : "(chưa tới phiên hôm nay)"}`
+      );
+    }
 
     // ============ ?call<sibling> — owner kích hoạt family-chat ngay, không chờ scheduler ============
     // Tên lệnh tự sinh theo persona: bên Mia là "?callmie", bên Mie là "?callmia".
