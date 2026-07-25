@@ -5,15 +5,18 @@ import {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
-  MessageFlags
+  MessageFlags,
+  PermissionFlagsBits
 } from "discord.js";
 import persona from "../personas/index.js";
+import { OWNER_ID } from "../config/env.js";
 import { getMemory, pushMemoryEntry, saveMemory, memoryUserCount } from "../core/memory.js";
 import { getUsageStatus, consumeUsage } from "../core/usage.js";
 import { checkCooldown } from "../core/cooldown.js";
 import { callChatModel, callImageModel } from "../core/aiClient.js";
 import { stripThink, splitMessage } from "../core/text.js";
 import { getFamilyContextMessage } from "../family/context.js";
+import { setHomeChannel } from "../core/channelConfig.js";
 
 export function registerInteractionHandlers(client) {
   client.on("interactionCreate", async interaction => {
@@ -90,6 +93,33 @@ Image: Qwen/qwen-Image-2.0-Pro
 Memory users: ${memoryUserCount()}
 Lượt chat còn lại hôm nay: ${chatQuota.remaining === Infinity ? "không giới hạn" : `${chatQuota.remaining}/${chatQuota.limit}`}
 Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "không giới hạn" : `${imageQuota.remaining}/${imageQuota.limit}`}`
+    );
+  }
+
+  if (interaction.commandName === "setchannel") {
+    const hasPermission =
+      interaction.user.id === OWNER_ID ||
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
+
+    if (!hasPermission) {
+      return interaction.reply({
+        content: "❌ Cần quyền Manage Server (hoặc là bố) mới dùng được lệnh này.",
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    if (!interaction.guildId) {
+      return interaction.reply({
+        content: "Lệnh này chỉ dùng được trong server.",
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    const channel = interaction.options.getChannel("channel");
+    setHomeChannel(interaction.guildId, channel.id);
+
+    return interaction.reply(
+      `✅ Đã đặt <#${channel.id}> làm kênh chính của ${persona.displayName} ở server này (dùng cho lời chào & mách lẻo). Mention chat vẫn hoạt động ở mọi kênh như bình thường.`
     );
   }
 

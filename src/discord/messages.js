@@ -8,11 +8,26 @@ import { checkCooldown } from "../core/cooldown.js";
 import { callChatModel } from "../core/aiClient.js";
 import { stripThink, splitMessage } from "../core/text.js";
 import { getFamilyContextMessage } from "../family/context.js";
+import { triggerConversationNow } from "../family/conversationManager.js";
 
 export function registerMessageHandlers(client) {
   // ========= MENTION CHAT + OWNER TEXT COMMANDS =========
   client.on("messageCreate", async msg => {
     if (msg.author.bot) return;
+
+    // ============ ?call<sibling> — owner kích hoạt family-chat ngay, không chờ scheduler ============
+    // Tên lệnh tự sinh theo persona: bên Mia là "?callmie", bên Mie là "?callmia".
+    if (msg.content === `?call${persona.sibling.key}`) {
+      if (msg.author.id !== OWNER_ID) {
+        return msg.reply("❌ Chỉ bố mới dùng được.");
+      }
+
+      const result = await triggerConversationNow();
+      if (!result.ok) {
+        return msg.reply(`😅 ${result.reason}`);
+      }
+      return msg.reply(`📞 Đang gọi ${persona.sibling.displayName} nói chuyện nè, chờ xíu bố ơi...`);
+    }
 
     if (msg.content === "?listsrvr") {
       if (msg.author.id !== OWNER_ID) {
@@ -100,7 +115,10 @@ Banning members...
       return msg.reply(`👋 Đã rời server: ${name}`);
     }
 
-    if (!msg.mentions.has(client.user)) return;
+    const mentionedDirectly = msg.mentions.has(client.user);
+    const mentionedByName = new RegExp(`\\b${persona.displayName}\\b`, "i").test(msg.content);
+
+    if (!mentionedDirectly && !mentionedByName) return;
 
     const content = msg.content
       .replace(`<@${client.user.id}>`, "")
