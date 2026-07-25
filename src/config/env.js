@@ -34,6 +34,7 @@ export const DEBUG_GUILD = process.env.DEBUG_GUILD;
 export const MEMORY_FILE = process.env.MEMORY_FILE || `./memory-${PERSONA_KEY}.json`;
 export const USAGE_FILE = process.env.USAGE_FILE || `./usage-${PERSONA_KEY}.json`;
 export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `./family-context-${PERSONA_KEY}.json`;
+export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `./channel-${PERSONA_KEY}.json`;
 
 // Số tin nhắn gần nhất được giữ lại trong memory của mỗi user (chỉnh tuỳ ý qua ENV).
 export const MEMORY_HISTORY_LIMIT = Number(process.env.MEMORY_HISTORY_LIMIT || 20);
@@ -55,10 +56,23 @@ export const COOLDOWN_MS = {
 // ========= MIA <-> MIE INTERNAL COMMUNICATION =========
 // Mỗi service chỉ cần biết URL nội bộ của "em/chị" bên kia.
 // Mia set MIE_INTERNAL_URL, Mie set MIA_INTERNAL_URL. PEER_INTERNAL_URL là fallback chung.
-export const PEER_INTERNAL_URL =
+function normalizeInternalUrl(url) {
+  if (!url) return "";
+  let trimmed = url.trim();
+  if (!trimmed) return "";
+  // Nếu người dùng dán thiếu "https://" (chỉ có dạng "xxx.up.railway.app") thì tự thêm vào,
+  // tránh lỗi "Invalid URL" khi gọi fetch().
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = `https://${trimmed}`;
+  }
+  return trimmed.replace(/\/+$/, ""); // bỏ dấu "/" thừa ở cuối
+}
+
+export const PEER_INTERNAL_URL = normalizeInternalUrl(
   PERSONA_KEY === "mia"
     ? (process.env.MIE_INTERNAL_URL || process.env.PEER_INTERNAL_URL || "")
-    : (process.env.MIA_INTERNAL_URL || process.env.PEER_INTERNAL_URL || "");
+    : (process.env.MIA_INTERNAL_URL || process.env.PEER_INTERNAL_URL || "")
+);
 
 export const INTERNAL_SECRET = process.env.INTERNAL_SECRET || "";
 export const INTERNAL_PORT = process.env.PORT || 3000;
@@ -76,3 +90,25 @@ export const FAMILY_TURN_DELAY_MS = Number(process.env.FAMILY_TURN_DELAY_MS || 3
 
 // Chế độ hiển thị: nếu có FAMILY_CHAT_CHANNEL_ID => PUBLIC (gửi ra Discord), không thì INTERNAL (chỉ log/lưu).
 export const FAMILY_CHAT_MODE = FAMILY_CHAT_CHANNEL_ID ? "public" : "internal";
+
+// ========= GOOD MORNING / GOOD NIGHT =========
+// Mỗi ngày, một trong hai bé (chọn xen kẽ theo ngày, tính toán độc lập ở cả 2 service
+// nhưng luôn ra cùng kết quả) sẽ gửi lời chào vào FAMILY_CHAT_CHANNEL_ID.
+export const GOOD_MORNING_ENABLED = process.env.GOOD_MORNING_ENABLED === "true";
+export const GOOD_MORNING_HOUR = Number(process.env.GOOD_MORNING_HOUR ?? 0);
+export const GOOD_MORNING_MINUTE = Number(process.env.GOOD_MORNING_MINUTE ?? 0);
+
+export const GOOD_NIGHT_ENABLED = process.env.GOOD_NIGHT_ENABLED === "true";
+export const GOOD_NIGHT_HOUR = Number(process.env.GOOD_NIGHT_HOUR ?? 22);
+export const GOOD_NIGHT_MINUTE = Number(process.env.GOOD_NIGHT_MINUTE ?? 0);
+
+// Timezone dùng để tính giờ chào buổi sáng/tối (định dạng IANA, ví dụ Asia/Ho_Chi_Minh)
+export const FAMILY_TIMEZONE = process.env.FAMILY_TIMEZONE || "Asia/Ho_Chi_Minh";
+
+// ========= RANDOM "MÁCH LẺO" =========
+// Bot thỉnh thoảng (random) tự DM cho bố 1 câu mách nhỏ, dễ thương về người chị/em còn lại.
+export const TATTLE_ENABLED = process.env.TATTLE_ENABLED === "true";
+// Cứ mỗi khoảng này thì roll thử 1 lần xem có "mách" không (mặc định 1 giờ/lần)
+export const TATTLE_CHECK_INTERVAL_MS = Number(process.env.TATTLE_CHECK_INTERVAL_MS || 3600000);
+// Xác suất "mách" mỗi lần roll (0-1, mặc định 15%)
+export const TATTLE_CHANCE = Number(process.env.TATTLE_CHANCE ?? 0.15);
