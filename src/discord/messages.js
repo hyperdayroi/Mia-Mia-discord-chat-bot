@@ -146,10 +146,7 @@ Banning members...
       return msg.reply(`👋 Đã rời server: ${name}`);
     }
 
-    const mentionedDirectly = msg.mentions.has(client.user);
-    const mentionedByName = new RegExp(`\\b${persona.displayName}\\b`, "i").test(msg.content);
-
-    if (!mentionedDirectly && !mentionedByName) return;
+    if (!msg.mentions.has(client.user)) return;
 
     const content = msg.content
       .replace(`<@${client.user.id}>`, "")
