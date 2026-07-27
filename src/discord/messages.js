@@ -146,7 +146,13 @@ Banning members...
       return msg.reply(`👋 Đã rời server: ${name}`);
     }
 
-    if (!msg.mentions.has(client.user)) return;
+    const mentionedDirectly = msg.mentions.has(client.user);
+    // Chỉ owner (bố) mới được gọi bằng cách gõ tên "Mia"/"Mie" mà không cần @mention.
+    // Người khác vẫn phải @mention thật như bình thường, tránh bị trigger tràn lan.
+    const ownerCalledByName =
+      msg.author.id === OWNER_ID && new RegExp(`\\b${persona.displayName}\\b`, "i").test(msg.content);
+
+    if (!mentionedDirectly && !ownerCalledByName) return;
 
     const content = msg.content
       .replace(`<@${client.user.id}>`, "")
