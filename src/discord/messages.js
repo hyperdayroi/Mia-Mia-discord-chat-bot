@@ -258,3 +258,34 @@ Banning members...
     }
   });
 }
+// ========= ABOUTSIVI =========
+    if (msg.content.toLowerCase().trim() === "sivi") {
+      await msg.reply(
+`╭・🌟———————————🌟・╮
+# ༒ Lục Địa Aether ༒
+╰・🌻———————————🌻・╯
+**\`GIỚI THIỆU:\`**
+
+•┈────────────┈•
+⏤͟͟͞͞ ⊰Xin chào và chào mừng bạn đến với **Lục Địa Aether**, nơi mà bạn sẽ tiến bước vào 1 cuộc hành trình lấy bối cảnh Fantasy quen thuộc đầy rộng lớn, huyền ảo và nhiều thứ khác đang chờ đợi bạn khám phá! Nay đã chính thức mở ra để chào các Dũng Giả mới hoặc các Cộng Đồng có chung chí hướng, mong muốn giao lưu, phát triển và hỗ trợ lẫn nhau⊱
+•┈────────────┈•
+
+
+ **\`Vùng đất này có gì cho bạn khám phá?\`**
+
+-  🏰**【Chủ Đề Fantasy】** — Vì chủ đề server là phong cách Fantasy nên gần như mọi hệ thống từ kênh, levels... đều mang chủ đề này
+-  🎮**【Đa Dạng Game】** — Server chơi đa dạng các thể loại game từ Valorant, Liên quân, Genshin v.v... đặc biệt còn có cả kênh cho phép bạn chiêu mộ những người đồng đội có chí hướng leo rank hoặc đơn giản là tấu hài
+-  📜**【Hệ Thống Uỷ Thác】** — Nơi mà bạn nhận nhiệm vụ và hoàn thành chúng trước những kẻ khác! Tuỳ theo cấp độ, độ khó phần thưởng sẽ càng cao và quý giá!
+-  🎊**【Events & Giveaways】** —  Events gần như mỗi tuần! (đã tạm hoãn, xl vì sự bất tiện này)
+
+**\`Và còn nhiều thứ khác nữa!!\`**
+
+**「**Sau khi kết minh (Partner) thành công, thông tin về server của bên bạn sẽ được trưng bày tại khu vực **Đồng Minh**, đồng thời bên mình cũng mong nhận được sự hỗ trợ tương tự từ bên phía bạn! Xin trân thành cảm ơn.**」**
+
+ **Kính chúc chư vị đạo vận hành thông, bằng hữu tứ phương.** 🧭
+🔗: https://discord.gg/jAMSEGH8Ua 
+[**\`Khám phá ngay!\`**](https://cdn.imgchest.com/files/7e50433c2b32.gif)`
+      );
+    }
+  });
+}
