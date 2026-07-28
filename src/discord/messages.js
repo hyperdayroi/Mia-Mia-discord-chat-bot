@@ -257,8 +257,8 @@ Banning members...
       });
     }
 
-    // ========= ABOUTSIVI =========
-    if (msg.content.toLowerCase().trim() === "aboutsivi") {
+    // ========= ABOUTSIVI (chỉ Mia, không áp dụng cho Mie) =========
+    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "aboutsivi") {
       await msg.reply(
 `╭・🌟———————————🌟・╮
 # ༒ Lục Địa Aether ༒
