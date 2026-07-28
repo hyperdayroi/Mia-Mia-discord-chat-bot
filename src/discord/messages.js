@@ -256,10 +256,9 @@ Banning members...
         components: [row]
       });
     }
-  });
-}
-// ========= ABOUTSIVI =========
-    if (msg.content.toLowerCase().trim() === "sivi") {
+
+    // ========= ABOUTSIVI =========
+    if (msg.content.toLowerCase().trim() === "aboutsivi") {
       await msg.reply(
 `╭・🌟———————————🌟・╮
 # ༒ Lục Địa Aether ༒
