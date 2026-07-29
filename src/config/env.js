@@ -50,7 +50,7 @@ export const UNLIMITED_IDS = [OWNER_ID];
 export const COOLDOWN_MS = {
   ask: 4000,
   image: 15000,
-  mention: 4000
+  mention: 3000
 };
 
 // ========= MIA <-> MIE INTERNAL COMMUNICATION =========
