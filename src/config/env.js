@@ -41,7 +41,7 @@ export const MEMORY_HISTORY_LIMIT = Number(process.env.MEMORY_HISTORY_LIMIT || 2
 
 // ========= DAILY LIMIT =========
 export const DAILY_LIMIT = {
-  chat: 500,
+  chat: 5,
   image: 5
 };
 export const UNLIMITED_IDS = [OWNER_ID];
