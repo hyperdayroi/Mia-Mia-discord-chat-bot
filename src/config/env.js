@@ -24,7 +24,7 @@ export const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 export const CLIENT_ID = process.env.CLIENT_ID;
 export const CKEY_API_KEY = process.env.CKEY_API_KEY;
 export const API_BASE = "https://api.xah.io/v1";
-export const CHAT_MODEL = "levuphong2909/gemini-3.5-flash-high";
+export const CHAT_MODEL = "vuduythanh2023/gemini-3.5-flash";
 export const IMAGE_MODEL = "phatchau036/gpt-image-2";
 
 export const DEBUG = process.env.DEBUG === "true";
