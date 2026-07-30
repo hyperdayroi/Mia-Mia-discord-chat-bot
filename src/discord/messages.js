@@ -258,7 +258,7 @@ Banning members...
     }
 
     // ========= ABOUTSIVI (chỉ Mia, không áp dụng cho Mie) =========
-    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "sivi") {
+    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "link") {
       await msg.reply(
 `╭・🌟———————————🌟・╮
 # ༒ Lục Địa Aether ༒
