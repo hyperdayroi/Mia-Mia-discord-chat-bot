@@ -24,8 +24,8 @@ export const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 export const CLIENT_ID = process.env.CLIENT_ID;
 export const CKEY_API_KEY = process.env.CKEY_API_KEY;
 export const API_BASE = "https://api.xah.io/v1";
-export const CHAT_MODEL = "tranhieu13102003/gemini-3.5-flash";
-export const IMAGE_MODEL = "phatchau036/gpt-image-2";
+export const CHAT_MODEL = "vuduythanh2023/gemini-3.1-pro-high";
+export const IMAGE_MODEL = "phuocanh421994/Wan2.7_Image_Pro";
 
 export const DEBUG = process.env.DEBUG === "true";
 export const DEBUG_GUILD = process.env.DEBUG_GUILD;
@@ -35,14 +35,15 @@ export const MEMORY_FILE = process.env.MEMORY_FILE || `./memory-${PERSONA_KEY}.j
 export const USAGE_FILE = process.env.USAGE_FILE || `./usage-${PERSONA_KEY}.json`;
 export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `./family-context-${PERSONA_KEY}.json`;
 export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `./channel-${PERSONA_KEY}.json`;
+export const BLACKLIST_FILE = process.env.BLACKLIST_FILE || `./blacklist-${PERSONA_KEY}.json`;
 
 // Số tin nhắn gần nhất được giữ lại trong memory của mỗi user (chỉnh tuỳ ý qua ENV).
 export const MEMORY_HISTORY_LIMIT = Number(process.env.MEMORY_HISTORY_LIMIT || 20);
 
 // ========= DAILY LIMIT =========
 export const DAILY_LIMIT = {
-  chat: 10,
-  image: 1
+  chat: 500,
+  image: 5
 };
 export const UNLIMITED_IDS = [OWNER_ID];
 
@@ -50,7 +51,7 @@ export const UNLIMITED_IDS = [OWNER_ID];
 export const COOLDOWN_MS = {
   ask: 4000,
   image: 15000,
-  mention: 3000
+  mention: 4000
 };
 
 // ========= MIA <-> MIE INTERNAL COMMUNICATION =========
