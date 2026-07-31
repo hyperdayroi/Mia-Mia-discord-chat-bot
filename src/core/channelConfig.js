@@ -11,6 +11,11 @@ export function setHomeChannel(guildId, channelId) {
   store.save();
 }
 
+export function removeHomeChannel(guildId) {
+  delete store.data[guildId];
+  store.save();
+}
+
 export function getHomeChannel(guildId) {
   return store.data[guildId] || null;
 }
