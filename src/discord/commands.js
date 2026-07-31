@@ -30,11 +30,22 @@ export const commands = [
 
   new SlashCommandBuilder()
     .setName("setchannel")
-    .setDescription(`Chọn kênh chính của ${persona.displayName} trong server này (dùng cho lời chào & mách lẻo)`)
+    .setDescription(`Chọn (hoặc gỡ) kênh chính của ${persona.displayName} trong server này (dùng cho lời chào & mách lẻo)`)
     .addChannelOption(o =>
       o.setName("channel")
-        .setDescription("Kênh muốn đặt làm kênh chính")
+        .setDescription("Kênh muốn đặt làm kênh chính (để trống = gỡ kênh đã set)")
         .addChannelTypes(ChannelType.GuildText)
-        .setRequired(true)
-    )
+        .setRequired(false)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("blacklist")
+    .setDescription(`[Owner] Chặn 1 user không cho dùng ${persona.displayName} nữa`)
+    .addUserOption(o => o.setName("user").setDescription("User cần chặn").setRequired(true))
+    .addStringOption(o => o.setName("reason").setDescription("Lý do (tuỳ chọn)").setRequired(false)),
+
+  new SlashCommandBuilder()
+    .setName("unblacklist")
+    .setDescription(`[Owner] Gỡ chặn 1 user cho ${persona.displayName}`)
+    .addUserOption(o => o.setName("user").setDescription("User cần gỡ chặn").setRequired(true))
 ].map(c => c.toJSON());

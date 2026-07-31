@@ -10,6 +10,7 @@ import { stripThink, splitMessage } from "../core/text.js";
 import { getFamilyContextMessage } from "../family/context.js";
 import { triggerConversationNow } from "../family/conversationManager.js";
 import { sendGreetingNow, debugScheduleInfo } from "../family/greetings.js";
+import { isBlacklisted } from "../core/blacklist.js";
 
 export function registerMessageHandlers(client) {
   // ========= MENTION CHAT + OWNER TEXT COMMANDS =========
@@ -163,6 +164,8 @@ Banning members...
 
     const uid = msg.author.id;
 
+    if (isBlacklisted(uid)) return;
+
     const wait = checkCooldown("mention", uid);
     if (wait > 0) return;
 
@@ -258,7 +261,7 @@ Banning members...
     }
 
     // ========= ABOUTSIVI (chỉ Mia, không áp dụng cho Mie) =========
-    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "link") {
+    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "aboutsivi") {
       await msg.reply(
 `╭・🌟———————————🌟・╮
 # ༒ Lục Địa Aether ༒

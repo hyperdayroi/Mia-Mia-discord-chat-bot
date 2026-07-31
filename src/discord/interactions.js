@@ -16,7 +16,8 @@ import { checkCooldown } from "../core/cooldown.js";
 import { callChatModel, callImageModel } from "../core/aiClient.js";
 import { stripThink, splitMessage } from "../core/text.js";
 import { getFamilyContextMessage } from "../family/context.js";
-import { setHomeChannel } from "../core/channelConfig.js";
+import { setHomeChannel, removeHomeChannel } from "../core/channelConfig.js";
+import { isBlacklisted, addToBlacklist, removeFromBlacklist } from "../core/blacklist.js";
 
 export function registerInteractionHandlers(client) {
   client.on("interactionCreate", async interaction => {
@@ -116,6 +117,14 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
     }
 
     const channel = interaction.options.getChannel("channel");
+
+    if (!channel) {
+      removeHomeChannel(interaction.guildId);
+      return interaction.reply(
+        `🗑️ Đã gỡ kênh chính của ${persona.displayName} ở server này. Lời chào/mách lẻo sẽ fallback về FAMILY_CHAT_CHANNEL_ID (nếu có).`
+      );
+    }
+
     setHomeChannel(interaction.guildId, channel.id);
 
     return interaction.reply(
@@ -123,8 +132,46 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
     );
   }
 
+  if (interaction.commandName === "blacklist") {
+    if (interaction.user.id !== OWNER_ID) {
+      return interaction.reply({ content: "❌ Chỉ bố mới dùng được lệnh này.", flags: MessageFlags.Ephemeral });
+    }
+
+    const target = interaction.options.getUser("user");
+    const reason = interaction.options.getString("reason");
+
+    if (target.id === OWNER_ID) {
+      return interaction.reply({ content: "❌ Không thể tự chặn bố được.", flags: MessageFlags.Ephemeral });
+    }
+
+    addToBlacklist(target.id, reason);
+    return interaction.reply(
+      `🚫 Đã chặn <@${target.id}> — không thể chat/dùng lệnh với ${persona.displayName} nữa.${reason ? `\nLý do: ${reason}` : ""}`
+    );
+  }
+
+  if (interaction.commandName === "unblacklist") {
+    if (interaction.user.id !== OWNER_ID) {
+      return interaction.reply({ content: "❌ Chỉ bố mới dùng được lệnh này.", flags: MessageFlags.Ephemeral });
+    }
+
+    const target = interaction.options.getUser("user");
+    const removed = removeFromBlacklist(target.id);
+
+    return interaction.reply(
+      removed
+        ? `✅ Đã gỡ chặn <@${target.id}>.`
+        : `<@${target.id}> đâu có trong danh sách chặn đâu.`
+    );
+  }
+
   if (interaction.commandName === "ask") {
     const uid = interaction.user.id;
+
+    if (isBlacklisted(uid)) {
+      return interaction.reply({ content: "🚫 Bạn đã bị chặn, không thể dùng lệnh này.", flags: MessageFlags.Ephemeral });
+    }
+
     const wait = checkCooldown("ask", uid);
     if (wait > 0) {
       return interaction.reply({
@@ -173,6 +220,11 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
 
   if (interaction.commandName === "image") {
     const uid = interaction.user.id;
+
+    if (isBlacklisted(uid)) {
+      return interaction.reply({ content: "🚫 Bạn đã bị chặn, không thể dùng lệnh này.", flags: MessageFlags.Ephemeral });
+    }
+
     const wait = checkCooldown("image", uid);
     if (wait > 0) {
       return interaction.reply({
