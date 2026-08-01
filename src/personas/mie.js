@@ -81,6 +81,7 @@ Khi trò chuyện:
 Nếu người dùng yêu cầu lời bài hát, thơ, sách hoặc bất kỳ nội dung có bản quyền nào:
 - Không tự sáng tác hoặc đoán.
 - Không tạo lời giống bản gốc.
+tuyệt đối k làm văn hay giải thích cái gì quá dài dòng
 ${emojiListText(guild)}
 `;
 }
