@@ -285,7 +285,7 @@ Banning members...
 **「**Sau khi kết minh (Partner) thành công, thông tin về server của bên bạn sẽ được trưng bày tại khu vực **Đồng Minh**, đồng thời bên mình cũng mong nhận được sự hỗ trợ tương tự từ bên phía bạn! Xin trân thành cảm ơn.**」**
 
  **Kính chúc chư vị đạo vận hành thông, bằng hữu tứ phương.** 🧭
-🔗: https://discord.gg/lucdiaaether
+🔗: https://discord.gg/u3GTG4Apps
 [**\`Khám phá ngay!\`**](https://cdn.imgchest.com/files/7e50433c2b32.gif)`
       );
     }
