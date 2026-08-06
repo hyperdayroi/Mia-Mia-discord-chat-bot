@@ -5,6 +5,8 @@ export const PERSONA_KEY = (process.env.PERSONA || "mia").toLowerCase().trim();
 
 // ========= OWNER (bố Hyper — chung cho cả Mia và Mie) =========
 export const OWNER_ID = "1217373421504041000";
+// User ID của "chị" — người mà Mia/Mie xưng "em", gọi "chị". Set qua ENV, để trống thì tính năng này tắt.
+export const SISTER_ID = process.env.SISTER_ID || "";
 
 // ========= REQUIRED ENV (bắt buộc để bot chạy được, bất kể persona nào) =========
 const REQUIRED_ENV = ["DISCORD_TOKEN", "CLIENT_ID", "CKEY_API_KEY"];
@@ -24,25 +26,52 @@ export const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 export const CLIENT_ID = process.env.CLIENT_ID;
 export const CKEY_API_KEY = process.env.CKEY_API_KEY;
 export const API_BASE = "https://api.xah.io/v1";
-export const CHAT_MODEL = "tranhieu13102003/gemini-3.5-flash";
+export const CHAT_MODEL = "vuduythanh2023/gemini-3.1-pro-high";
 export const IMAGE_MODEL = "phuocanh421994/Wan2.7_Image_Pro";
+
+// ========= CHUYỂN ĐỔI PROVIDER CHO PHẦN CHAT (không ảnh hưởng /image, vẫn dùng CKEY) =========
+// AI_PROVIDER=ckey (mặc định, giữ nguyên như cũ) hoặc AI_PROVIDER=gemini (Google AI Studio, free tier)
+export const AI_PROVIDER = (process.env.AI_PROVIDER || "ckey").toLowerCase().trim();
+
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+export const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+if (AI_PROVIDER === "gemini" && !GEMINI_API_KEY) {
+  console.error("AI_PROVIDER=gemini nhưng thiếu GEMINI_API_KEY. Kiểm tra lại file .env");
+  process.exit(1);
+}
+if (!["ckey", "gemini"].includes(AI_PROVIDER)) {
+  console.error(`AI_PROVIDER không hợp lệ: "${AI_PROVIDER}". Chỉ chấp nhận "ckey" hoặc "gemini".`);
+  process.exit(1);
+}
 
 export const DEBUG = process.env.DEBUG === "true";
 export const DEBUG_GUILD = process.env.DEBUG_GUILD;
 
 // ========= PER-PERSONA STORAGE (mỗi Railway service set riêng) =========
-export const MEMORY_FILE = process.env.MEMORY_FILE || `./memory-${PERSONA_KEY}.json`;
-export const USAGE_FILE = process.env.USAGE_FILE || `./usage-${PERSONA_KEY}.json`;
-export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `./family-context-${PERSONA_KEY}.json`;
-export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `./channel-${PERSONA_KEY}.json`;
-export const BLACKLIST_FILE = process.env.BLACKLIST_FILE || `./blacklist-${PERSONA_KEY}.json`;
+// Gom hết vào 1 thư mục DATA_DIR để chỉ cần trỏ Railway Volume vào đúng 1 chỗ
+// là toàn bộ dữ liệu (memory, usage, family context, channel config, blacklist...)
+// đều được lưu bền, không cần set volume riêng cho từng file.
+export const DATA_DIR = process.env.DATA_DIR || "./data";
+
+export const MEMORY_FILE = process.env.MEMORY_FILE || `${DATA_DIR}/memory-${PERSONA_KEY}.json`;
+export const USAGE_FILE = process.env.USAGE_FILE || `${DATA_DIR}/usage-${PERSONA_KEY}.json`;
+export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `${DATA_DIR}/family-context-${PERSONA_KEY}.json`;
+export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `${DATA_DIR}/channel-${PERSONA_KEY}.json`;
+export const BLACKLIST_FILE = process.env.BLACKLIST_FILE || `${DATA_DIR}/blacklist-${PERSONA_KEY}.json`;
 
 // Số tin nhắn gần nhất được giữ lại trong memory của mỗi user (chỉnh tuỳ ý qua ENV).
 export const MEMORY_HISTORY_LIMIT = Number(process.env.MEMORY_HISTORY_LIMIT || 20);
 
+// Số tin nhắn gần nhất trong kênh mà bot âm thầm ghi nhớ (không cần @) để hiểu ngữ cảnh
+// đang nói chuyện gì — CHỈ dùng để trả lời có liên quan hơn khi được @, không tự nhảy vào chat.
+// Lưu trong bộ nhớ (RAM), không ghi ra file, tự mất khi restart.
+export const CHANNEL_CONTEXT_LIMIT = Number(process.env.CHANNEL_CONTEXT_LIMIT || 15);
+
 // ========= DAILY LIMIT =========
 export const DAILY_LIMIT = {
-  chat: 50,
+  chat: 500,
   image: 5
 };
 export const UNLIMITED_IDS = [OWNER_ID];
