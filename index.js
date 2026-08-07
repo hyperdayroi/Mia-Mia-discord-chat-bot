@@ -1,3 +1,6 @@
+import ffmpegPath from "ffmpeg-static";
+process.env.FFMPEG_PATH = ffmpegPath;
+
 import { ActivityType } from "discord.js";
 import persona from "./personas/index.js";
 import {
