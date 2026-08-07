@@ -1,5 +1,9 @@
 import persona from "../personas/index.js";
-import { getMemory, pushMemoryEntry, saveMemory } from "../core/memory.js";
+import {
+  getMemory,
+  pushMemoryEntry,
+  saveMemory
+} from "../core/memory.js";
 import { callChatModel } from "../core/aiClient.js";
 import { stripThink } from "../core/text.js";
 import { getFamilyContextMessage } from "../family/context.js";
@@ -8,86 +12,215 @@ import { transcribeAudio } from "./speechToText.js";
 import { synthesizeSpeech } from "./textToSpeech.js";
 import { playAudioBuffer } from "./player.js";
 
-// 1 phiên "đang nghe" cho mỗi server — chỉ nghe 1 người/lúc trong 1 server.
-const activeSessions = new Map(); // guildId -> { active: boolean }
+const activeSessions = new Map();
 
-/** @param {string} guildId */
+// Chỉ đưa vài message gần nhất vào voice.
+// Voice không cần toàn bộ text-chat history.
+const VOICE_HISTORY_LIMIT = 6;
+
+const VOICE_INSTRUCTION = [
+  "Đây là voice chat.",
+  "Trả lời bằng tiếng Việt, tự nhiên như đang nói chuyện.",
+  "Chỉ trả lời 1-2 câu ngắn.",
+  "Không markdown, không bullet, không code.",
+  "Không nhắc rằng bạn là AI.",
+  "Không giải thích dài dòng."
+].join(" ");
+
 export function isListening(guildId) {
-  return Boolean(activeSessions.get(guildId)?.active);
+  return Boolean(
+    activeSessions.get(guildId)?.active
+  );
 }
 
-/**
- * Bắt đầu vòng lặp nghe liên tục 1 user trong voice channel, tới khi stopListening().
- * @param {import("@discordjs/voice").VoiceConnection} connection
- * @param {import("discord.js").Guild} guild
- * @param {string} userId
- */
-export function startListening(connection, guild, userId) {
-  if (activeSessions.get(guild.id)?.active) return false;
+export function startListening(
+  connection,
+  guild,
+  userId
+) {
+  if (
+    activeSessions.get(guild.id)?.active
+  ) {
+    return false;
+  }
 
-  const session = { active: true };
-  activeSessions.set(guild.id, session);
+  const session = {
+    active: true
+  };
 
-  runListenLoop(connection, guild, userId, session).catch(err => {
-    console.error("VOICE_SESSION_ERROR:", err.message || err);
+  activeSessions.set(
+    guild.id,
+    session
+  );
+
+  runListenLoop(
+    connection,
+    guild,
+    userId,
+    session
+  ).catch(err => {
+    console.error(
+      "VOICE_SESSION_ERROR:",
+      err.message || err
+    );
+
     session.active = false;
+    activeSessions.delete(guild.id);
   });
 
   return true;
 }
 
-/** @param {string} guildId */
 export function stopListening(guildId) {
-  const session = activeSessions.get(guildId);
-  if (!session) return false;
+  const session =
+    activeSessions.get(guildId);
+
+  if (!session) {
+    return false;
+  }
+
   session.active = false;
   activeSessions.delete(guildId);
+
   return true;
 }
 
-async function runListenLoop(connection, guild, userId, session) {
+async function runListenLoop(
+  connection,
+  guild,
+  userId,
+  session
+) {
   while (session.active) {
-    let wavBuffer;
     try {
-      wavBuffer = await captureUtterance(connection, userId);
-    } catch (err) {
-      console.error("VOICE_CAPTURE_ERROR:", err.message || err);
-      continue;
-    }
+      // 800ms silence thay vì 1200ms.
+      const wavBuffer =
+        await captureUtterance(
+          connection,
+          userId,
+          {
+            silenceMs: 800,
+            maxMs: 15000
+          }
+        );
 
-    if (!session.active) break;
-    if (!wavBuffer) continue; // im lặng cả lượt, không có gì để xử lý -> nghe tiếp
+      if (!session.active) break;
+      if (!wavBuffer) continue;
 
-    try {
-      const transcript = await transcribeAudio(wavBuffer);
+      const turnStarted = Date.now();
+
+      // STT
+      const transcript =
+        await transcribeAudio(
+          wavBuffer
+        );
+
+      if (!session.active) break;
       if (!transcript) continue;
 
-      const chat = getMemory(userId);
-      pushMemoryEntry(userId, { role: "user", content: transcript });
+      console.log(
+        `VOICE_TRANSCRIPT: ${transcript}`
+      );
 
-      const reply = await callChatModel([
-        { role: "system", content: persona.systemPrompt(userId, guild) },
-        { role: "system", content: getFamilyContextMessage() },
+      // Lấy history trước khi thêm message mới,
+      // rồi chỉ gửi một phần nhỏ cho model.
+      const fullChat =
+        getMemory(userId) || [];
+
+      const chat =
+        fullChat.slice(
+          -VOICE_HISTORY_LIMIT
+        );
+
+      pushMemoryEntry(
+        userId,
         {
-          role: "system",
-          content: "Đây là đoạn hội thoại BẰNG GIỌNG NÓI (voice chat), không phải chat chữ — trả lời ngắn gọn, tự nhiên như đang nói chuyện thật, tránh liệt kê dài dòng hay markdown."
-        },
-        ...chat
-      ]);
+          role: "user",
+          content: transcript
+        }
+      );
 
-      const finalReply = stripThink(reply || "").trim();
+      // Chat model: context nhỏ + instruction voice ngắn.
+      const reply =
+        await callChatModel([
+          {
+            role: "system",
+            content:
+              persona.systemPrompt(
+                userId,
+                guild
+              )
+          },
+          {
+            role: "system",
+            content:
+              getFamilyContextMessage()
+          },
+          {
+            role: "system",
+            content:
+              VOICE_INSTRUCTION
+          },
+          ...chat
+        ]);
+
+      if (!session.active) break;
+
+      const finalReply =
+        stripThink(
+          reply || ""
+        ).trim();
+
       if (!finalReply) continue;
 
-      pushMemoryEntry(userId, { role: "assistant", content: finalReply });
+      console.log(
+        `VOICE_REPLY: ${finalReply}`
+      );
+
+      pushMemoryEntry(
+        userId,
+        {
+          role: "assistant",
+          content: finalReply
+        }
+      );
+
+      // Lưu memory sau khi xử lý xong lượt,
+      // không chặn trước khi AI/TTS bắt đầu.
       saveMemory();
 
-      const ttsAudio = await synthesizeSpeech(finalReply);
-      if (session.active) {
-        await playAudioBuffer(connection, ttsAudio);
-      }
+      // TTS
+      const ttsAudio =
+        await synthesizeSpeech(
+          finalReply
+        );
+
+      if (!session.active) break;
+
+      // Playback
+      await playAudioBuffer(
+        connection,
+        ttsAudio
+      );
+
+      console.log(
+        `VOICE_TURN_TOTAL: ${
+          Date.now() - turnStarted
+        }ms`
+      );
+
     } catch (err) {
-      console.error("VOICE_TURN_ERROR:", err.message || err);
-      // Lỗi 1 lượt không được làm chết cả phiên nghe — tiếp tục vòng lặp.
+      console.error(
+        "VOICE_TURN_ERROR:",
+        err.message || err
+      );
+
+      // Lỗi một lượt không làm chết session.
+      // Nghỉ rất ngắn để tránh loop lỗi ăn CPU.
+      await new Promise(
+        resolve =>
+          setTimeout(resolve, 150)
+      );
     }
   }
 }
