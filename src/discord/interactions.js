@@ -424,37 +424,67 @@ Lượt tạo ảnh còn lại hôm nay: ${
 
       return interaction.reply({
         content:
-          "Mia không có quyền **Speak** trong voice channel này.",
-        flags: MessageFlags.Ephemeral
-      });
-    }
-
-    try {
-
-      stopListening(
-        interaction.guildId
-      );
-
-      await joinChannel(channel);
-
-      return interaction.reply(
-        `🎧 Mia đã vào <#${channel.id}>. Dùng \`/listen start\` để Mia bắt đầu nghe và trả lời bằng giọng nói.`
-      );
-
-    } catch (err) {
-
-      console.error(
-        "VOICE_JOIN_ERROR:",
-        err
-      );
-
-      return interaction.reply({
-        content:
-          "Mia không vào voice được 😭 Kiểm tra quyền Connect/Speak của bot rồi thử lại nha.",
-        flags: MessageFlags.Ephemeral
-      });
-    }
+if (interaction.commandName === "join") {
+  if (!interaction.guildId || !interaction.guild) {
+    return interaction.reply({
+      content: "Lệnh này chỉ dùng được trong server.",
+      flags: MessageFlags.Ephemeral
+    });
   }
+
+  const member = interaction.member;
+  const channel = member?.voice?.channel;
+
+  if (!channel) {
+    return interaction.reply({
+      content: "Bố phải vào voice channel trước đã 😭",
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  const me = interaction.guild.members.me;
+  const permissions = me ? channel.permissionsFor(me) : null;
+
+  if (
+    permissions &&
+    !permissions.has(PermissionFlagsBits.Connect)
+  ) {
+    return interaction.reply({
+      content: "Mia không có quyền **Connect** vào voice channel này.",
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  if (
+    permissions &&
+    !permissions.has(PermissionFlagsBits.Speak)
+  ) {
+    return interaction.reply({
+      content: "Mia không có quyền **Speak** trong voice channel này.",
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  // ACK interaction ngay lập tức
+  await interaction.deferReply();
+
+  try {
+    stopListening(interaction.guildId);
+
+    await joinChannel(channel);
+
+    return interaction.editReply(
+      `🎧 Mia đã vào <#${channel.id}>. Dùng \`/listen start\` để Mia bắt đầu nghe và trả lời bằng giọng nói.`
+    );
+
+  } catch (err) {
+    console.error("VOICE_JOIN_ERROR:", err);
+
+    return interaction.editReply(
+      "Mia không vào voice được 😭 Kiểm tra quyền **Connect/Speak** và thử lại nha."
+    );
+  }
+      }
 
 
   // ==========================================================
