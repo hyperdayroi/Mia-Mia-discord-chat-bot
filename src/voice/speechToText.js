@@ -1,39 +1,75 @@
 import fetch from "node-fetch";
-import { GEMINI_API_KEY, GEMINI_API_BASE, GEMINI_MODEL } from "../config/env.js";
+import {
+  GEMINI_API_KEY,
+  GEMINI_API_BASE,
+  GEMINI_MODEL
+} from "../config/env.js";
 
-/**
- * Gửi audio (WAV buffer) cho Gemini để lấy ra transcript văn bản thuần —
- * không dùng dịch vụ STT riêng, tận dụng khả năng đọc audio trực tiếp của Gemini.
- * @param {Buffer} wavBuffer
- * @returns {Promise<string>}
+/*
+ * STT có thể dùng model riêng nếu Railway env có:
+ * GEMINI_STT_MODEL=...
+ *
+ * Nếu không có thì tự fallback về GEMINI_MODEL hiện tại.
  */
+const STT_MODEL =
+  process.env.GEMINI_STT_MODEL || GEMINI_MODEL;
+
+const STT_PROMPT =
+  "Phiên âm chính xác audio sang tiếng Việt. " +
+  "Chỉ trả về đúng lời được nói, không giải thích.";
+
 export async function transcribeAudio(wavBuffer) {
-  const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const url =
+    `${GEMINI_API_BASE}/models/${STT_MODEL}` +
+    `:generateContent?key=${GEMINI_API_KEY}`;
+
+  const started = Date.now();
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
       contents: [
         {
           role: "user",
           parts: [
-            { text: "Hãy phiên âm CHÍNH XÁC những gì được nói trong đoạn audio này sang văn bản tiếng Việt. Chỉ trả về đúng phần văn bản đã nói, không thêm chú thích, không thêm dấu ngoặc kép, không dịch nghĩa gì thêm." },
-            { inlineData: { mimeType: "audio/wav", data: wavBuffer.toString("base64") } }
+            { text: STT_PROMPT },
+            {
+              inlineData: {
+                mimeType: "audio/wav",
+                data: wavBuffer.toString("base64")
+              }
+            }
           ]
         }
       ],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 300 }
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 100
+      }
     })
   });
 
   const data = await res.json();
 
   if (!res.ok) {
-    console.error("GEMINI_STT_ERROR:", JSON.stringify(data));
+    console.error(
+      "GEMINI_STT_ERROR:",
+      JSON.stringify(data)
+    );
     throw new Error(JSON.stringify(data));
   }
 
-  const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join("") || "";
+  const text =
+    data?.candidates?.[0]?.content?.parts
+      ?.map(p => p.text || "")
+      .join("") || "";
+
+  console.log(
+    `VOICE_STT: ${Date.now() - started}ms`
+  );
+
   return text.trim();
 }
