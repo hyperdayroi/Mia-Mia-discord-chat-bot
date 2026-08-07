@@ -3,7 +3,7 @@ import "dotenv/config";
 // ========= PERSONA =========
 export const PERSONA_KEY = (process.env.PERSONA || "mia").toLowerCase().trim();
 
-// ========= OWNER (bố Hyper — chung cho cả Mia và Mie) =========
+// ========= OWNER / SISTER (bố Hyper / chị — chung cho cả Mia và Mie) =========
 export const OWNER_ID = "1217373421504041000";
 // User ID của "chị" — người mà Mia/Mie xưng "em", gọi "chị". Set qua ENV, để trống thì tính năng này tắt.
 export const SISTER_ID = process.env.SISTER_ID || "";
@@ -29,8 +29,8 @@ export const API_BASE = "https://api.xah.io/v1";
 export const CHAT_MODEL = "vuduythanh2023/gemini-3.1-pro-high";
 export const IMAGE_MODEL = "phuocanh421994/Wan2.7_Image_Pro";
 
-// ========= CHUYỂN ĐỔI PROVIDER CHO PHẦN CHAT (không ảnh hưởng /image, vẫn dùng CKEY) =========
-// AI_PROVIDER=ckey (mặc định, giữ nguyên như cũ) hoặc AI_PROVIDER=gemini (Google AI Studio, free tier)
+// ========= CHUYỂN ĐỔI PROVIDER CHO PHẦN CHAT (/ask, mention chat...) =========
+// /image luôn dùng CKEY_API_KEY ở trên, không đổi theo cái này.
 export const AI_PROVIDER = (process.env.AI_PROVIDER || "ckey").toLowerCase().trim();
 
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
@@ -46,13 +46,15 @@ if (!["ckey", "gemini"].includes(AI_PROVIDER)) {
   process.exit(1);
 }
 
+// ========= VOICE (nghe + nói trong voice channel, dùng chung GEMINI_API_KEY) =========
+export const GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || "gemini-3.1-flash-tts-preview";
+// Chọn 1 trong các giọng có sẵn của Gemini TTS, ví dụ: Kore, Puck, Zephyr, Leda...
+export const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Kore";
+
 export const DEBUG = process.env.DEBUG === "true";
 export const DEBUG_GUILD = process.env.DEBUG_GUILD;
 
-// ========= PER-PERSONA STORAGE (mỗi Railway service set riêng) =========
-// Gom hết vào 1 thư mục DATA_DIR để chỉ cần trỏ Railway Volume vào đúng 1 chỗ
-// là toàn bộ dữ liệu (memory, usage, family context, channel config, blacklist...)
-// đều được lưu bền, không cần set volume riêng cho từng file.
+// ========= STORAGE (gom hết vào DATA_DIR để chỉ cần trỏ 1 Railway Volume) =========
 export const DATA_DIR = process.env.DATA_DIR || "./data";
 
 export const MEMORY_FILE = process.env.MEMORY_FILE || `${DATA_DIR}/memory-${PERSONA_KEY}.json`;
@@ -61,13 +63,16 @@ export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `${DATA_DIR}
 export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `${DATA_DIR}/channel-${PERSONA_KEY}.json`;
 export const BLACKLIST_FILE = process.env.BLACKLIST_FILE || `${DATA_DIR}/blacklist-${PERSONA_KEY}.json`;
 
-// Số tin nhắn gần nhất được giữ lại trong memory của mỗi user (chỉnh tuỳ ý qua ENV).
+// Số tin nhắn gần nhất giữ lại trong memory của mỗi user (mặc định 20, chỉnh tuỳ ý)
 export const MEMORY_HISTORY_LIMIT = Number(process.env.MEMORY_HISTORY_LIMIT || 20);
 
 // Số tin nhắn gần nhất trong kênh mà bot âm thầm ghi nhớ (không cần @) để hiểu ngữ cảnh
 // đang nói chuyện gì — CHỈ dùng để trả lời có liên quan hơn khi được @, không tự nhảy vào chat.
-// Lưu trong bộ nhớ (RAM), không ghi ra file, tự mất khi restart.
 export const CHANNEL_CONTEXT_LIMIT = Number(process.env.CHANNEL_CONTEXT_LIMIT || 15);
+
+// Số tin nhắn gần nhất CỦA RIÊNG 1 user mà bot âm thầm ghi nhớ (không cần @) — khác
+// CHANNEL_CONTEXT_LIMIT ở chỗ đây chỉ tính tin của người đó, không lẫn người khác.
+export const USER_CONTEXT_LIMIT = Number(process.env.USER_CONTEXT_LIMIT || 18);
 
 // ========= DAILY LIMIT =========
 export const DAILY_LIMIT = {
@@ -84,20 +89,17 @@ export const COOLDOWN_MS = {
 };
 
 // ========= MIA <-> MIE INTERNAL COMMUNICATION =========
-// Mỗi service chỉ cần biết URL nội bộ của "em/chị" bên kia.
-// Mia set MIE_INTERNAL_URL, Mie set MIA_INTERNAL_URL. PEER_INTERNAL_URL là fallback chung.
 function normalizeInternalUrl(url) {
   if (!url) return "";
   let trimmed = url.trim();
   if (!trimmed) return "";
-  // Nếu người dùng dán thiếu "https://" (chỉ có dạng "xxx.up.railway.app") thì tự thêm vào,
-  // tránh lỗi "Invalid URL" khi gọi fetch().
   if (!/^https?:\/\//i.test(trimmed)) {
     trimmed = `https://${trimmed}`;
   }
-  return trimmed.replace(/\/+$/, ""); // bỏ dấu "/" thừa ở cuối
+  return trimmed.replace(/\/+$/, "");
 }
 
+// Mia set MIE_INTERNAL_URL, Mie set MIA_INTERNAL_URL. PEER_INTERNAL_URL là fallback chung.
 export const PEER_INTERNAL_URL = normalizeInternalUrl(
   PERSONA_KEY === "mia"
     ? (process.env.MIE_INTERNAL_URL || process.env.PEER_INTERNAL_URL || "")
@@ -113,17 +115,12 @@ export const AUTO_CHAT_ENABLED = process.env.AUTO_CHAT_ENABLED === "true";
 export const AUTO_CHAT_INTERVAL = Number(process.env.AUTO_CHAT_INTERVAL || 1800000); // 30 phút
 export const MAX_CONVERSATION_TURNS = Number(process.env.MAX_CONVERSATION_TURNS || 10);
 export const FAMILY_CHAT_CHANNEL_ID = process.env.FAMILY_CHAT_CHANNEL_ID || "";
-// Khoảng cách tối thiểu giữa 2 cuộc hội thoại tự động (mặc định = AUTO_CHAT_INTERVAL nếu không set riêng)
 export const FAMILY_CHAT_COOLDOWN_MS = Number(process.env.FAMILY_CHAT_COOLDOWN_MS || AUTO_CHAT_INTERVAL);
-// Delay giữa mỗi lượt nhắn trong 1 cuộc hội thoại để không spam quá nhanh
 export const FAMILY_TURN_DELAY_MS = Number(process.env.FAMILY_TURN_DELAY_MS || 3000);
 
-// Chế độ hiển thị: nếu có FAMILY_CHAT_CHANNEL_ID => PUBLIC (gửi ra Discord), không thì INTERNAL (chỉ log/lưu).
 export const FAMILY_CHAT_MODE = FAMILY_CHAT_CHANNEL_ID ? "public" : "internal";
 
 // ========= GOOD MORNING / GOOD NIGHT =========
-// Mỗi ngày, một trong hai bé (chọn xen kẽ theo ngày, tính toán độc lập ở cả 2 service
-// nhưng luôn ra cùng kết quả) sẽ gửi lời chào vào FAMILY_CHAT_CHANNEL_ID.
 export const GOOD_MORNING_ENABLED = process.env.GOOD_MORNING_ENABLED === "true";
 export const GOOD_MORNING_HOUR = Number(process.env.GOOD_MORNING_HOUR ?? 0);
 export const GOOD_MORNING_MINUTE = Number(process.env.GOOD_MORNING_MINUTE ?? 0);
@@ -132,13 +129,9 @@ export const GOOD_NIGHT_ENABLED = process.env.GOOD_NIGHT_ENABLED === "true";
 export const GOOD_NIGHT_HOUR = Number(process.env.GOOD_NIGHT_HOUR ?? 22);
 export const GOOD_NIGHT_MINUTE = Number(process.env.GOOD_NIGHT_MINUTE ?? 0);
 
-// Timezone dùng để tính giờ chào buổi sáng/tối (định dạng IANA, ví dụ Asia/Ho_Chi_Minh)
 export const FAMILY_TIMEZONE = process.env.FAMILY_TIMEZONE || "Asia/Ho_Chi_Minh";
 
 // ========= RANDOM "MÁCH LẺO" =========
-// Bot thỉnh thoảng (random) tự DM cho bố 1 câu mách nhỏ, dễ thương về người chị/em còn lại.
 export const TATTLE_ENABLED = process.env.TATTLE_ENABLED === "true";
-// Cứ mỗi khoảng này thì roll thử 1 lần xem có "mách" không (mặc định 1 giờ/lần)
 export const TATTLE_CHECK_INTERVAL_MS = Number(process.env.TATTLE_CHECK_INTERVAL_MS || 3600000);
-// Xác suất "mách" mỗi lần roll (0-1, mặc định 15%)
 export const TATTLE_CHANCE = Number(process.env.TATTLE_CHANCE ?? 0.15);
