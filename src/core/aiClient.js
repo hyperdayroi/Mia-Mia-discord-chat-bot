@@ -32,7 +32,7 @@ async function callCkeyChatModel(messages) {
       messages,
       temperature: 0.85,
       top_p: 0.95,
-      max_tokens: 10
+      max_tokens: 5
     })
   });
 
