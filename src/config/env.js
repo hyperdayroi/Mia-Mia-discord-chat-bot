@@ -76,7 +76,7 @@ export const USER_CONTEXT_LIMIT = Number(process.env.USER_CONTEXT_LIMIT || 18);
 
 // ========= DAILY LIMIT =========
 export const DAILY_LIMIT = {
-  chat: 500,
+  chat: 10,
   image: 5
 };
 export const UNLIMITED_IDS = [OWNER_ID];
