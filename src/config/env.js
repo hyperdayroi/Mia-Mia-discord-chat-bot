@@ -62,6 +62,8 @@ export const USAGE_FILE = process.env.USAGE_FILE || `${DATA_DIR}/usage-${PERSONA
 export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `${DATA_DIR}/family-context-${PERSONA_KEY}.json`;
 export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `${DATA_DIR}/channel-${PERSONA_KEY}.json`;
 export const BLACKLIST_FILE = process.env.BLACKLIST_FILE || `${DATA_DIR}/blacklist-${PERSONA_KEY}.json`;
+export const GIVEAWAY_FILE = process.env.GIVEAWAY_FILE || `${DATA_DIR}/giveaway-${PERSONA_KEY}.json`;
+export const AUTORESPONSE_FILE = process.env.AUTORESPONSE_FILE || `${DATA_DIR}/autorespond-${PERSONA_KEY}.json`;
 
 // Số tin nhắn gần nhất giữ lại trong memory của mỗi user (mặc định 20, chỉnh tuỳ ý)
 export const MEMORY_HISTORY_LIMIT = Number(process.env.MEMORY_HISTORY_LIMIT || 20);
@@ -76,7 +78,7 @@ export const USER_CONTEXT_LIMIT = Number(process.env.USER_CONTEXT_LIMIT || 18);
 
 // ========= DAILY LIMIT =========
 export const DAILY_LIMIT = {
-  chat: 10,
+  chat: 500,
   image: 5
 };
 export const UNLIMITED_IDS = [OWNER_ID];
