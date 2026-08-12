@@ -108,5 +108,15 @@ export const commands = [
         .setDescription("Xoá 1 auto-response theo ID")
         .addStringOption(o => o.setName("id").setDescription("ID (xem qua /autorespond list)").setRequired(true))
     )
-    .addSubcommand(sub => sub.setName("list").setDescription("Xem danh sách auto-response trong server này"))
+    .addSubcommand(sub => sub.setName("list").setDescription("Xem danh sách auto-response trong server này")),
+
+  new SlashCommandBuilder()
+    .setName("announce")
+    .setDescription("[Admin] Đăng + tự ghim 1 thông báo vào kênh")
+    .addChannelOption(o =>
+      o.setName("channel").setDescription("Kênh muốn đăng").addChannelTypes(ChannelType.GuildText).setRequired(true)
+    )
+    .addStringOption(o => o.setName("title").setDescription("Tiêu đề thông báo").setRequired(true))
+    .addStringOption(o => o.setName("message").setDescription("Nội dung thông báo").setRequired(true))
+    .addStringOption(o => o.setName("image").setDescription("URL ảnh đính kèm (tuỳ chọn)").setRequired(false))
 ].map(c => c.toJSON());

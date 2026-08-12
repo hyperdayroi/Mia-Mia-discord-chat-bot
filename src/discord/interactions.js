@@ -6,7 +6,8 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   MessageFlags,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  EmbedBuilder
 } from "discord.js";
 import persona from "../personas/index.js";
 import { OWNER_ID } from "../config/env.js";
@@ -312,6 +313,48 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
       return interaction.reply(removed ? `✅ Đã xoá auto-response \`${id}\`.` : "Không tìm thấy ID đó.");
     }
     return;
+  }
+
+  if (interaction.commandName === "announce") {
+    const hasPermission =
+      interaction.user.id === OWNER_ID || interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+
+    if (!hasPermission) {
+      return interaction.reply({
+        content: "❌ Cần quyền Administrator (hoặc là bố) mới dùng được lệnh này.",
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    const channel = interaction.options.getChannel("channel");
+    const title = interaction.options.getString("title");
+    const message = interaction.options.getString("message");
+    const image = interaction.options.getString("image");
+
+    if (!channel.isTextBased()) {
+      return interaction.reply({ content: "❌ Kênh này không phải kênh chữ.", flags: MessageFlags.Ephemeral });
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    try {
+      const embed = new EmbedBuilder()
+        .setColor("#5865F2")
+        .setTitle(title)
+        .setDescription(message)
+        .setFooter({ text: `Thông báo từ ${persona.displayName}` })
+        .setTimestamp();
+
+      if (image) embed.setImage(image);
+
+      const sent = await channel.send({ embeds: [embed] });
+      await sent.pin().catch(() => {}); // không có quyền pin thì vẫn giữ tin nhắn, chỉ bỏ qua bước ghim
+
+      return interaction.editReply(`✅ Đã đăng và ghim thông báo vào <#${channel.id}>.`);
+    } catch (err) {
+      console.error("ANNOUNCE_ERROR:", err.message || err);
+      return interaction.editReply("❌ Không đăng được, kiểm tra lại quyền bot trong kênh đó.");
+    }
   }
 
   if (interaction.commandName === "ask") {
