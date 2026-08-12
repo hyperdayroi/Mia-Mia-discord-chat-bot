@@ -41,50 +41,72 @@ export const commands = [
   new SlashCommandBuilder()
     .setName("blacklist")
     .setDescription(`[Owner] Chặn 1 user không cho dùng ${persona.displayName} nữa`)
-    .addUserOption(o =>
-      o.setName("user")
-        .setDescription("User cần chặn")
-        .setRequired(true)
-    )
-    .addStringOption(o =>
-      o.setName("reason")
-        .setDescription("Lý do (tuỳ chọn)")
-        .setRequired(false)
-    ),
+    .addUserOption(o => o.setName("user").setDescription("User cần chặn").setRequired(true))
+    .addStringOption(o => o.setName("reason").setDescription("Lý do (tuỳ chọn)").setRequired(false)),
 
   new SlashCommandBuilder()
     .setName("unblacklist")
     .setDescription(`[Owner] Gỡ chặn 1 user cho ${persona.displayName}`)
-    .addUserOption(o =>
-      o.setName("user")
-        .setDescription("User cần gỡ chặn")
-        .setRequired(true)
-    ),
-
-  // =========================
-  // VOICE COMMANDS
-  // =========================
+    .addUserOption(o => o.setName("user").setDescription("User cần gỡ chặn").setRequired(true)),
 
   new SlashCommandBuilder()
-    .setName("join")
-    .setDescription("Cho Mia vào voice channel bạn đang ở"),
-
-  new SlashCommandBuilder()
-    .setName("leave")
-    .setDescription("Cho Mia rời voice channel"),
-
-  new SlashCommandBuilder()
-    .setName("listen")
-    .setDescription("Bật/tắt chế độ nghe và trả lời bằng giọng nói")
+    .setName("giveaway")
+    .setDescription("Tạo/quản lý giveaway")
     .addSubcommand(sub =>
       sub
-        .setName("start")
-        .setDescription("Bắt đầu nghe bạn nói và trả lời bằng giọng nói")
+        .setName("create")
+        .setDescription("Tạo giveaway mới")
+        .addStringOption(o => o.setName("prize").setDescription("Phần thưởng là gì").setRequired(true))
+        .addStringOption(o =>
+          o.setName("duration").setDescription("Thời lượng (vd: 1h, 30m, 1d2h)").setRequired(true)
+        )
+        .addIntegerOption(o =>
+          o.setName("winners").setDescription("Số người thắng (mặc định 1)").setMinValue(1).setRequired(false)
+        )
     )
     .addSubcommand(sub =>
       sub
-        .setName("stop")
-        .setDescription("Dừng chế độ nghe")
+        .setName("end")
+        .setDescription("[Owner] Kết thúc sớm 1 giveaway")
+        .addStringOption(o => o.setName("id").setDescription("ID giveaway (xem ở footer embed)").setRequired(true))
     )
+    .addSubcommand(sub =>
+      sub
+        .setName("reroll")
+        .setDescription("[Owner] Quay lại người thắng cho 1 giveaway đã kết thúc")
+        .addStringOption(o => o.setName("id").setDescription("ID giveaway (xem ở footer embed)").setRequired(true))
+    )
+    .addSubcommand(sub => sub.setName("list").setDescription("Xem các giveaway đang chạy")),
 
+  new SlashCommandBuilder()
+    .setName("autorespond")
+    .setDescription("Bot tự trả lời khi có từ khoá xuất hiện trong tin nhắn (không cần @)")
+    .addSubcommand(sub =>
+      sub
+        .setName("add")
+        .setDescription("Thêm 1 auto-response mới")
+        .addStringOption(o => o.setName("trigger").setDescription("Từ khoá kích hoạt").setRequired(true))
+        .addStringOption(o => o.setName("response").setDescription("Nội dung bot sẽ trả lời").setRequired(true))
+        .addStringOption(o =>
+          o
+            .setName("matchtype")
+            .setDescription("Kiểu khớp (mặc định: chứa từ khoá)")
+            .addChoices(
+              { name: "Chứa từ khoá", value: "contains" },
+              { name: "Khớp chính xác", value: "exact" },
+              { name: "Bắt đầu bằng", value: "startsWith" }
+            )
+            .setRequired(false)
+        )
+        .addStringOption(o =>
+          o.setName("image").setDescription("URL ảnh đính kèm (tuỳ chọn) — có ảnh sẽ gửi dạng embed").setRequired(false)
+        )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName("remove")
+        .setDescription("Xoá 1 auto-response theo ID")
+        .addStringOption(o => o.setName("id").setDescription("ID (xem qua /autorespond list)").setRequired(true))
+    )
+    .addSubcommand(sub => sub.setName("list").setDescription("Xem danh sách auto-response trong server này"))
 ].map(c => c.toJSON());

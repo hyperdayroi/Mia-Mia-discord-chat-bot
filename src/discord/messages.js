@@ -11,11 +11,31 @@ import { getFamilyContextMessage } from "../family/context.js";
 import { triggerConversationNow } from "../family/conversationManager.js";
 import { sendGreetingNow, debugScheduleInfo } from "../family/greetings.js";
 import { isBlacklisted } from "../core/blacklist.js";
+import { trackChannelMessage, getChannelContextMessage } from "../core/channelContext.js";
+import { findMatch } from "../core/autoresponseStore.js";
 
 export function registerMessageHandlers(client) {
-  // ========= MENTION CHAT + OWNER TEXT COMMANDS =========
+  // ========= MENTION CHAT + OWNER TEXT COMMANDS + AUTORESPOND =========
   client.on("messageCreate", async msg => {
     if (msg.author.bot) return;
+
+    // Âm thầm ghi nhận MỌI tin nhắn (không chỉ tin @ bot) để hiểu ngữ cảnh kênh —
+    // KHÔNG dùng để tự động trả lời hay trigger bất cứ gì, chỉ để tham khảo sau này.
+    trackChannelMessage(msg.channelId, msg.member?.displayName || msg.author.username, msg.content);
+
+    // ============ AUTO-RESPOND — từ khoá do owner/admin tự cấu hình qua /autorespond ============
+    if (msg.guildId && !isBlacklisted(msg.author.id)) {
+      const match = findMatch(msg.guildId, msg.content);
+      if (match) {
+        if (match.image) {
+          const embed = new EmbedBuilder().setColor("#00ccff").setDescription(match.response).setImage(match.image);
+          msg.reply({ embeds: [embed] }).catch(() => {});
+        } else {
+          msg.reply(match.response).catch(() => {});
+        }
+        return;
+      }
+    }
 
     // ============ ?testgreeting <morning|night> — test gửi lời chào ngay, bỏ qua giờ/phiên ============
     if (msg.content.startsWith("?testgreeting")) {
@@ -147,13 +167,7 @@ Banning members...
       return msg.reply(`👋 Đã rời server: ${name}`);
     }
 
-    const mentionedDirectly = msg.mentions.has(client.user);
-    // Chỉ owner (bố) mới được gọi bằng cách gõ tên "Mia"/"Mie" mà không cần @mention.
-    // Người khác vẫn phải @mention thật như bình thường, tránh bị trigger tràn lan.
-    const ownerCalledByName =
-      msg.author.id === OWNER_ID && new RegExp(`\\b${persona.displayName}\\b`, "i").test(msg.content);
-
-    if (!mentionedDirectly && !ownerCalledByName) return;
+    if (!msg.mentions.has(client.user)) return;
 
     const content = msg.content
       .replace(`<@${client.user.id}>`, "")
@@ -207,9 +221,11 @@ Banning members...
     pushMemoryEntry(uid, { role: "user", content: userContent });
 
     try {
+      const channelContext = getChannelContextMessage(msg.channelId);
       const reply = await callChatModel([
         { role: "system", content: persona.systemPrompt(uid, msg.guild) },
         { role: "system", content: getFamilyContextMessage() },
+        ...(channelContext ? [{ role: "system", content: channelContext }] : []),
         ...chat
       ]);
       const finalReply = stripThink(reply || "Lag.") || "Lag.";
@@ -236,32 +252,11 @@ Banning members...
     }
   });
 
-  // ========= ANXIN =========
+  // ========= ABOUTSIVI (chỉ Mia, không áp dụng cho Mie) =========
   client.on("messageCreate", async msg => {
     if (msg.author.bot) return;
 
-    if (msg.content.toLowerCase().trim() === "anxin") {
-      const embed = new EmbedBuilder()
-        .setColor("#00ff99")
-        .setTitle("💸 HYPER ANXIN")
-        .setDescription("Chọn QR để cho bố em cốc cà phê nè hihi!")
-        .setThumbnail("https://media.tenor.com/8E5qF5LhY2kAAAAi/money.gif");
-
-      const button = new ButtonBuilder()
-        .setCustomId("choose_qr")
-        .setLabel("Chọn mã")
-        .setStyle(ButtonStyle.Primary);
-
-      const row = new ActionRowBuilder().addComponents(button);
-
-      await msg.reply({
-        embeds: [embed],
-        components: [row]
-      });
-    }
-
-    // ========= ABOUTSIVI (chỉ Mia, không áp dụng cho Mie) =========
-    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "link") {
+    if (persona.key === "mia" && msg.content.toLowerCase().trim() === "aboutsivi") {
       await msg.reply(
 `╭・🌟———————————🌟・╮
 # ༒ Lục Địa Aether ༒
@@ -285,9 +280,34 @@ Banning members...
 **「**Sau khi kết minh (Partner) thành công, thông tin về server của bên bạn sẽ được trưng bày tại khu vực **Đồng Minh**, đồng thời bên mình cũng mong nhận được sự hỗ trợ tương tự từ bên phía bạn! Xin trân thành cảm ơn.**」**
 
  **Kính chúc chư vị đạo vận hành thông, bằng hữu tứ phương.** 🧭
-🔗: https://discord.gg/u3GTG4Apps
+🔗: https://discord.gg/jAMSEGH8Ua 
 [**\`Khám phá ngay!\`**](https://cdn.imgchest.com/files/7e50433c2b32.gif)`
       );
+    }
+  });
+
+  // ========= ANXIN =========
+  client.on("messageCreate", async msg => {
+    if (msg.author.bot) return;
+
+    if (msg.content.toLowerCase().trim() === "anxin") {
+      const embed = new EmbedBuilder()
+        .setColor("#00ff99")
+        .setTitle("💸 HYPER ANXIN")
+        .setDescription("Chọn QR để cho bố em cốc cà phê nè hihi!")
+        .setThumbnail("https://media.tenor.com/8E5qF5LhY2kAAAAi/money.gif");
+
+      const button = new ButtonBuilder()
+        .setCustomId("choose_qr")
+        .setLabel("Chọn mã")
+        .setStyle(ButtonStyle.Primary);
+
+      const row = new ActionRowBuilder().addComponents(button);
+
+      await msg.reply({
+        embeds: [embed],
+        components: [row]
+      });
     }
   });
 }
