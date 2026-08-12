@@ -20,6 +20,7 @@ import { startInternalServer } from "./family/server.js";
 import { initConversationManager, scheduleAutonomousConversation } from "./family/conversationManager.js";
 import { scheduleGreetings } from "./family/greetings.js";
 import { scheduleTattle } from "./family/tattle.js";
+import { initGiveawayManager } from "./giveaway/manager.js";
 
 const client = createDiscordClient();
 
@@ -31,6 +32,7 @@ client.once("ready", () => {
     activities: [{ name: persona.presence.name, type: ActivityType.Playing }],
     status: "online"
   });
+  initGiveawayManager(client);
 });
 
 registerInteractionHandlers(client);
