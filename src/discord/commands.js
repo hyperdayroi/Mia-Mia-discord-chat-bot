@@ -63,6 +63,38 @@ export const commands = [
         .addIntegerOption(o =>
           o.setName("winners").setDescription("Số người thắng (mặc định 1)").setMinValue(1).setRequired(false)
         )
+        .addChannelOption(o =>
+          o
+            .setName("channel")
+            .setDescription("Kênh muốn đăng (mặc định: kênh hiện tại)")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(false)
+        )
+        .addRoleOption(o =>
+          o.setName("required_role").setDescription("Chỉ user có role này mới tham gia được (tuỳ chọn)").setRequired(false)
+        )
+        .addIntegerOption(o =>
+          o
+            .setName("required_messages")
+            .setDescription("Cần nhắn ít nhất bao nhiêu tin HÔM NAY mới tham gia được (tuỳ chọn)")
+            .setMinValue(1)
+            .setRequired(false)
+        )
+        .addStringOption(o =>
+          o.setName("thumbnail").setDescription("URL ảnh nhỏ góc phải embed (tuỳ chọn)").setRequired(false)
+        )
+        .addStringOption(o =>
+          o.setName("image").setDescription("URL ảnh lớn cuối embed (tuỳ chọn)").setRequired(false)
+        )
+        .addStringOption(o =>
+          o.setName("color").setDescription("Màu embed dạng hex, vd: #ff69b4 (tuỳ chọn)").setRequired(false)
+        )
+        .addStringOption(o =>
+          o
+            .setName("emoji")
+            .setDescription("Emoji cho nút tham gia — dán emoji server (custom) hoặc emoji thường (tuỳ chọn)")
+            .setRequired(false)
+        )
     )
     .addSubcommand(sub =>
       sub
@@ -118,5 +150,21 @@ export const commands = [
     )
     .addStringOption(o => o.setName("title").setDescription("Tiêu đề thông báo").setRequired(true))
     .addStringOption(o => o.setName("message").setDescription("Nội dung thông báo").setRequired(true))
-    .addStringOption(o => o.setName("image").setDescription("URL ảnh đính kèm (tuỳ chọn)").setRequired(false))
+    .addStringOption(o => o.setName("image").setDescription("URL ảnh đính kèm (tuỳ chọn)").setRequired(false)),
+
+  new SlashCommandBuilder()
+    .setName("setwelcome")
+    .setDescription("Tuỳ chỉnh embed chào member mới (avatar tự động kèm sẵn)")
+    .addStringOption(o =>
+      o
+        .setName("message")
+        .setDescription("Nội dung mô tả. Để trống = AI tự soạn. Placeholder: {user} {server} {membercount}")
+        .setRequired(false)
+    )
+    .addStringOption(o => o.setName("title").setDescription("Tiêu đề embed (tuỳ chọn)").setRequired(false))
+    .addStringOption(o => o.setName("banner").setDescription("URL ảnh/GIF banner lớn (tuỳ chọn)").setRequired(false))
+    .addStringOption(o => o.setName("color").setDescription("Màu embed dạng hex, vd: #57f287 (tuỳ chọn)").setRequired(false))
+    .addBooleanOption(o =>
+      o.setName("reset").setDescription("true = xoá hết cấu hình, quay lại mặc định (AI tự soạn)").setRequired(false)
+    )
 ].map(c => c.toJSON());

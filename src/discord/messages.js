@@ -13,6 +13,7 @@ import { sendGreetingNow, debugScheduleInfo } from "../family/greetings.js";
 import { isBlacklisted } from "../core/blacklist.js";
 import { trackChannelMessage, getChannelContextMessage } from "../core/channelContext.js";
 import { findMatch } from "../core/autoresponseStore.js";
+import { incrementDailyMessage } from "../core/dailyMessageStore.js";
 
 export function registerMessageHandlers(client) {
   // ========= MENTION CHAT + OWNER TEXT COMMANDS + AUTORESPOND =========
@@ -22,6 +23,7 @@ export function registerMessageHandlers(client) {
     // Âm thầm ghi nhận MỌI tin nhắn (không chỉ tin @ bot) để hiểu ngữ cảnh kênh —
     // KHÔNG dùng để tự động trả lời hay trigger bất cứ gì, chỉ để tham khảo sau này.
     trackChannelMessage(msg.channelId, msg.member?.displayName || msg.author.username, msg.content);
+    if (msg.guildId) incrementDailyMessage(msg.guildId, msg.author.id);
 
     // ============ AUTO-RESPOND — từ khoá do owner/admin tự cấu hình qua /autorespond ============
     if (msg.guildId && !isBlacklisted(msg.author.id)) {

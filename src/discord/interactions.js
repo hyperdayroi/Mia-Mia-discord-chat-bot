@@ -22,6 +22,7 @@ import { isBlacklisted, addToBlacklist, removeFromBlacklist } from "../core/blac
 import { getChannelContextMessage } from "../core/channelContext.js";
 import { createGiveawayFlow, endGiveaway, rerollGiveaway, handleJoin } from "../giveaway/manager.js";
 import { getGiveaway, getActiveGiveaways } from "../core/giveawayStore.js";
+import { setWelcomeConfig, removeWelcomeConfig } from "../core/welcomeStore.js";
 import { parseDuration, formatDuration } from "../utils/duration.js";
 import { addAutoresponse, removeAutoresponse, getAutoresponses } from "../core/autoresponseStore.js";
 
@@ -53,13 +54,15 @@ export function registerInteractionHandlers(client) {
 
     if (interaction.isButton() && interaction.customId.startsWith("giveaway_join_")) {
       const giveawayId = interaction.customId.replace("giveaway_join_", "");
-      const result = handleJoin(giveawayId, interaction.user.id);
+      const result = handleJoin(giveawayId, interaction.member);
 
       if (!result.ok) {
         const messages = {
           already: "Bạn tham gia rồi mà 🎉",
           ended: "Giveaway này kết thúc rồi, trễ mất tiêu.",
-          not_found: "Không tìm thấy giveaway này."
+          not_found: "Không tìm thấy giveaway này.",
+          missing_role: "❌ Bạn cần có role phù hợp mới tham gia được giveaway này.",
+          not_enough_messages: `❌ Bạn cần nhắn ít nhất ${result.need} tin hôm nay mới tham gia được (hiện đã nhắn ${result.have}).`
         };
         return interaction.reply({
           content: messages[result.reason] || "Có lỗi xảy ra.",
@@ -68,6 +71,24 @@ export function registerInteractionHandlers(client) {
       }
 
       return interaction.reply({ content: "✅ Đã ghi danh vào giveaway! Chúc may mắn 🍀", flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.isButton() && interaction.customId.startsWith("giveaway_participants_")) {
+      const giveawayId = interaction.customId.replace("giveaway_participants_", "");
+      const giveaway = getGiveaway(giveawayId);
+
+      if (!giveaway) {
+        return interaction.reply({ content: "Không tìm thấy giveaway này.", flags: MessageFlags.Ephemeral });
+      }
+      if (!giveaway.entries.length) {
+        return interaction.reply({ content: "Chưa có ai tham gia giveaway này cả.", flags: MessageFlags.Ephemeral });
+      }
+
+      const list = giveaway.entries.map(uid => `<@${uid}>`).join(", ");
+      return interaction.reply({
+        content: `**${giveaway.entries.length} người tham gia "${giveaway.prize}":**\n${list}`,
+        flags: MessageFlags.Ephemeral
+      });
     }
 
     if (interaction.isStringSelectMenu() && interaction.customId === "select_qr") {
@@ -195,6 +216,13 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
       const prize = interaction.options.getString("prize");
       const durationInput = interaction.options.getString("duration");
       const winnerCount = interaction.options.getInteger("winners") || 1;
+      const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
+      const requiredRole = interaction.options.getRole("required_role");
+      const requiredMessages = interaction.options.getInteger("required_messages");
+      const thumbnail = interaction.options.getString("thumbnail");
+      const image = interaction.options.getString("image");
+      const colorInput = interaction.options.getString("color");
+      const emoji = interaction.options.getString("emoji");
 
       const durationMs = parseDuration(durationInput);
       if (!durationMs || durationMs < 30_000) {
@@ -204,18 +232,38 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
         });
       }
 
+      let color = null;
+      if (colorInput) {
+        const hex = colorInput.replace("#", "");
+        const parsed = parseInt(hex, 16);
+        if (Number.isNaN(parsed)) {
+          return interaction.reply({
+            content: "❌ Màu không hợp lệ, dùng dạng hex như `#ff69b4`.",
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        color = parsed;
+      }
+
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       await createGiveawayFlow({
-        channel: interaction.channel,
+        channel: targetChannel,
         prize,
         durationMs,
         winnerCount,
         hostId: interaction.user.id,
-        hostName: interaction.member?.displayName || interaction.user.username
+        requiredRoleId: requiredRole?.id || null,
+        requiredDailyMessages: requiredMessages || null,
+        thumbnail,
+        image,
+        color,
+        emoji
       });
 
-      return interaction.editReply(`✅ Đã tạo giveaway "${prize}" — kết thúc sau ${formatDuration(durationMs)}.`);
+      return interaction.editReply(
+        `✅ Đã tạo giveaway "${prize}" ở <#${targetChannel.id}> — kết thúc sau ${formatDuration(durationMs)}.`
+      );
     }
 
     if (sub === "end" || sub === "reroll") {
@@ -355,6 +403,64 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
       console.error("ANNOUNCE_ERROR:", err.message || err);
       return interaction.editReply("❌ Không đăng được, kiểm tra lại quyền bot trong kênh đó.");
     }
+  }
+
+  if (interaction.commandName === "setwelcome") {
+    const hasPermission =
+      interaction.user.id === OWNER_ID || interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
+
+    if (!hasPermission) {
+      return interaction.reply({
+        content: "❌ Cần quyền Manage Server (hoặc là bố) mới dùng được lệnh này.",
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    if (!interaction.guildId) {
+      return interaction.reply({ content: "Lệnh này chỉ dùng được trong server.", flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.options.getBoolean("reset")) {
+      removeWelcomeConfig(interaction.guildId);
+      return interaction.reply("🗑️ Đã xoá hết cấu hình welcome — quay lại mặc định (AI tự soạn, không banner).");
+    }
+
+    const message = interaction.options.getString("message");
+    const title = interaction.options.getString("title");
+    const banner = interaction.options.getString("banner");
+    const colorInput = interaction.options.getString("color");
+
+    let color;
+    if (colorInput) {
+      const parsed = parseInt(colorInput.replace("#", ""), 16);
+      if (Number.isNaN(parsed)) {
+        return interaction.reply({
+          content: "❌ Màu không hợp lệ, dùng dạng hex như `#57f287`.",
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      color = parsed;
+    }
+
+    if (!message && !title && !banner && color === undefined) {
+      return interaction.reply({
+        content: "Bạn chưa điền gì cả — điền ít nhất 1 trong `message`/`title`/`banner`/`color`, hoặc dùng `reset:true` để xoá cấu hình.",
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    const update = {};
+    if (message) update.message = message;
+    if (title) update.title = title;
+    if (banner) update.banner = banner;
+    if (color !== undefined) update.color = color;
+
+    setWelcomeConfig(interaction.guildId, update);
+    return interaction.reply(
+      `✅ Đã cập nhật cấu hình welcome:\n${Object.entries(update)
+        .map(([k, v]) => `- **${k}**: ${v}`)
+        .join("\n")}`
+    );
   }
 
   if (interaction.commandName === "ask") {
