@@ -63,6 +63,8 @@ export const FAMILY_MEMORY_FILE = process.env.FAMILY_MEMORY_FILE || `${DATA_DIR}
 export const CHANNEL_CONFIG_FILE = process.env.CHANNEL_CONFIG_FILE || `${DATA_DIR}/channel-${PERSONA_KEY}.json`;
 export const BLACKLIST_FILE = process.env.BLACKLIST_FILE || `${DATA_DIR}/blacklist-${PERSONA_KEY}.json`;
 export const GIVEAWAY_FILE = process.env.GIVEAWAY_FILE || `${DATA_DIR}/giveaway-${PERSONA_KEY}.json`;
+export const DAILY_MESSAGE_FILE = process.env.DAILY_MESSAGE_FILE || `${DATA_DIR}/daily-messages-${PERSONA_KEY}.json`;
+export const WELCOME_FILE = process.env.WELCOME_FILE || `${DATA_DIR}/welcome-${PERSONA_KEY}.json`;
 export const AUTORESPONSE_FILE = process.env.AUTORESPONSE_FILE || `${DATA_DIR}/autorespond-${PERSONA_KEY}.json`;
 
 // Số tin nhắn gần nhất giữ lại trong memory của mỗi user (mặc định 20, chỉnh tuỳ ý)
