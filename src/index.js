@@ -21,6 +21,7 @@ import { initConversationManager, scheduleAutonomousConversation } from "./famil
 import { scheduleGreetings } from "./family/greetings.js";
 import { scheduleTattle } from "./family/tattle.js";
 import { initGiveawayManager } from "./giveaway/manager.js";
+import { registerWelcomeHandler } from "./discord/welcome.js";
 
 const client = createDiscordClient();
 
@@ -37,6 +38,7 @@ client.once("ready", () => {
 
 registerInteractionHandlers(client);
 registerMessageHandlers(client);
+registerWelcomeHandler(client);
 
 initConversationManager(client);
 startInternalServer();
