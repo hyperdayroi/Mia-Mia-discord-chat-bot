@@ -7,7 +7,8 @@ export function createDiscordClient() {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildEmojisAndStickers,
-      GatewayIntentBits.GuildVoiceStates // bắt buộc để bot join/nghe được voice channel
+      GatewayIntentBits.GuildVoiceStates, // bắt buộc để bot join/nghe được voice channel
+      GatewayIntentBits.GuildMembers // bắt buộc để nhận sự kiện member mới join (welcome)
     ]
   });
 }
