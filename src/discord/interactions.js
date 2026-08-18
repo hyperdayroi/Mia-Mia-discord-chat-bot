@@ -20,7 +20,7 @@ import { getFamilyContextMessage } from "../family/context.js";
 import { setHomeChannel, removeHomeChannel } from "../core/channelConfig.js";
 import { isBlacklisted, addToBlacklist, removeFromBlacklist } from "../core/blacklist.js";
 import { getChannelContextMessage } from "../core/channelContext.js";
-import { createGiveawayFlow, endGiveaway, rerollGiveaway, handleJoin } from "../giveaway/manager.js";
+import { createGiveawayFlow, endGiveaway, rerollGiveaway, handleJoin, buildParticipantsEmbed } from "../giveaway/manager.js";
 import { getGiveaway, getActiveGiveaways } from "../core/giveawayStore.js";
 import { setWelcomeConfig, removeWelcomeConfig } from "../core/welcomeStore.js";
 import { parseDuration, formatDuration } from "../utils/duration.js";
@@ -80,15 +80,8 @@ export function registerInteractionHandlers(client) {
       if (!giveaway) {
         return interaction.reply({ content: "Không tìm thấy giveaway này.", flags: MessageFlags.Ephemeral });
       }
-      if (!giveaway.entries.length) {
-        return interaction.reply({ content: "Chưa có ai tham gia giveaway này cả.", flags: MessageFlags.Ephemeral });
-      }
 
-      const list = giveaway.entries.map(uid => `<@${uid}>`).join(", ");
-      return interaction.reply({
-        content: `**${giveaway.entries.length} người tham gia "${giveaway.prize}":**\n${list}`,
-        flags: MessageFlags.Ephemeral
-      });
+      return interaction.reply({ embeds: [buildParticipantsEmbed(giveaway)], flags: MessageFlags.Ephemeral });
     }
 
     if (interaction.isStringSelectMenu() && interaction.customId === "select_qr") {
@@ -293,8 +286,13 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
 
       if (sub === "reroll") {
         const result = await rerollGiveaway(id);
+        if (!result.ok) {
+          return interaction.reply({ content: `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
+        }
         return interaction.reply({
-          content: result.ok ? "✅ Đã reroll người thắng." : `❌ ${result.reason}`,
+          content: result.announced
+            ? "✅ Đã reroll người thắng."
+            : "⚠️ Đã chọn người thắng mới, nhưng không đăng thông báo lên kênh được (có thể tin nhắn gốc đã bị xoá).",
           flags: MessageFlags.Ephemeral
         });
       }
