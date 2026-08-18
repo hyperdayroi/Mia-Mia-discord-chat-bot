@@ -45,6 +45,43 @@ function buildGiveawayEmbed(giveaway) {
   return embed;
 }
 
+/** @param {object} giveaway */
+export function buildParticipantsEmbed(giveaway) {
+  const embed = new EmbedBuilder()
+    .setColor(giveaway.color || 0x5865f2)
+    .setTitle(`👥 Người tham gia — ${giveaway.prize}`)
+    .setFooter({ text: `ID: ${giveaway.id} • Tổng: ${giveaway.entries.length} người` })
+    .setTimestamp();
+
+  if (!giveaway.entries.length) {
+    embed.setDescription("Chưa có ai tham gia cả 😢");
+    return embed;
+  }
+
+  // Discord giới hạn 1024 ký tự/field và tối đa 25 field — chia thành từng nhóm
+  // ~20 người/field để không vượt giới hạn, và cắt bớt nếu quá nhiều người tham gia.
+  const CHUNK_SIZE = 20;
+  const MAX_FIELDS = 24; // chừa 1 slot cho field "và còn X người khác"
+  const chunks = [];
+  for (let i = 0; i < giveaway.entries.length; i += CHUNK_SIZE) {
+    chunks.push(giveaway.entries.slice(i, i + CHUNK_SIZE));
+  }
+
+  const visibleChunks = chunks.slice(0, MAX_FIELDS);
+  visibleChunks.forEach((chunk, idx) => {
+    const start = idx * CHUNK_SIZE + 1;
+    const end = start + chunk.length - 1;
+    embed.addFields({ name: `${start}–${end}`, value: chunk.map(id => `<@${id}>`).join(", ") });
+  });
+
+  if (chunks.length > MAX_FIELDS) {
+    const shown = MAX_FIELDS * CHUNK_SIZE;
+    embed.addFields({ name: "...", value: `Và **${giveaway.entries.length - shown}** người khác nữa.` });
+  }
+
+  return embed;
+}
+
 // Parse emoji người dùng dán vào (unicode thường, hoặc dạng <:name:id> / <a:name:id> copy từ Discord)
 // để dùng làm icon trên nút — hỗ trợ cả emoji server đã thêm sẵn vào bot.
 function parseEmojiInput(input) {
@@ -169,28 +206,28 @@ export async function endGiveaway(id, { silent = false } = {}) {
 /** @param {string} id */
 export async function rerollGiveaway(id) {
   const giveaway = getGiveaway(id);
-  if (!giveaway || !giveaway.ended) return { ok: false, reason: "Giveaway này chưa kết thúc hoặc không tồn tại." };
+  if (!giveaway) return { ok: false, reason: "Không tìm thấy giveaway này." };
+  if (!giveaway.ended) return { ok: false, reason: "Giveaway này chưa kết thúc, không reroll được." };
+  if (!giveaway.entries.length) return { ok: false, reason: "Không có ai tham gia để reroll cả." };
 
   const winners = pickWinners(giveaway.entries, giveaway.winnerCount);
   const updated = updateGiveaway(id, { winners });
 
-  if (discordClient) {
-    try {
-      const channel = await discordClient.channels.fetch(giveaway.channelId);
-      const message = await channel.messages.fetch(giveaway.messageId);
-      await message.edit({ embeds: [buildGiveawayEmbed(updated)] });
+  if (!discordClient) return { ok: true, giveaway: updated, announced: false };
 
-      if (winners.length) {
-        await channel.send(`🔄 Reroll! Người thắng mới: ${winners.map(w => `<@${w}>`).join(", ")}`);
-      } else {
-        await channel.send("🔄 Reroll nhưng không có ai tham gia để chọn cả 😢");
-      }
-    } catch (err) {
-      console.error("GIVEAWAY_REROLL_ERROR:", err.message || err);
-    }
+  try {
+    const channel = await discordClient.channels.fetch(giveaway.channelId);
+    const message = await channel.messages.fetch(giveaway.messageId);
+    await message.edit({ embeds: [buildGiveawayEmbed(updated)] });
+    await channel.send(`🔄 Reroll! Người thắng mới: ${winners.map(w => `<@${w}>`).join(", ")}`);
+    return { ok: true, giveaway: updated, announced: true };
+  } catch (err) {
+    console.error("GIVEAWAY_REROLL_ERROR:", err.message || err);
+    // Đã chọn được người thắng mới và lưu thành công, chỉ là không đăng thông báo lên
+    // Discord được (VD tin nhắn gốc bị xoá) — vẫn báo ok:true nhưng announced:false để
+    // command handler báo đúng tình trạng cho owner, không nói dối là mọi thứ suôn sẻ.
+    return { ok: true, giveaway: updated, announced: false };
   }
-
-  return { ok: true, giveaway: updated };
 }
 
 /**
@@ -204,11 +241,13 @@ export function handleJoin(giveawayId, member) {
   if (giveaway.ended) return { ok: false, reason: "ended" };
   if (giveaway.entries.includes(member.id)) return { ok: false, reason: "already" };
 
-  if (giveaway.requiredRoleId && !member.roles?.cache?.has(giveaway.requiredRoleId)) {
-    return { ok: false, reason: "missing_role" };
-  }
-
-  if (giveaway.requiredDailyMessages) {
+  // Nếu có set required_role thì ƯU TIÊN kiểm tra role, BỎ QUA điều kiện tin nhắn
+  // (2 điều kiện không cộng dồn — set role thì khỏi cần đủ tin nhắn nữa).
+  if (giveaway.requiredRoleId) {
+    if (!member.roles?.cache?.has(giveaway.requiredRoleId)) {
+      return { ok: false, reason: "missing_role" };
+    }
+  } else if (giveaway.requiredDailyMessages) {
     const have = getDailyMessageCount(giveaway.guildId, member.id);
     if (have < giveaway.requiredDailyMessages) {
       return { ok: false, reason: "not_enough_messages", need: giveaway.requiredDailyMessages, have };
@@ -219,6 +258,10 @@ export function handleJoin(giveawayId, member) {
   return { ok: true };
 }
 
+// Chọn ngẫu nhiên `count` người thắng từ danh sách entries, KHÔNG trùng lặp.
+// Thuật toán: mỗi lượt chọn 1 phần tử ngẫu nhiên đều trong pool còn lại rồi loại nó ra
+// (partial Fisher-Yates) — đảm bảo MỌI người trong entries có xác suất trúng bằng nhau,
+// dùng chung cho cả lúc kết thúc giveaway lẫn lúc /giveaway reroll.
 function pickWinners(entries, count) {
   const pool = [...entries];
   const winners = [];
