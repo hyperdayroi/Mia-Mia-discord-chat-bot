@@ -62,7 +62,9 @@ export function registerInteractionHandlers(client) {
           ended: "Giveaway này kết thúc rồi, trễ mất tiêu.",
           not_found: "Không tìm thấy giveaway này.",
           missing_role: "❌ Bạn cần có role phù hợp mới tham gia được giveaway này.",
-          not_enough_messages: `❌ Bạn cần nhắn ít nhất ${result.need} tin hôm nay mới tham gia được (hiện đã nhắn ${result.have}).`
+          not_enough_messages: `❌ Bạn cần nhắn ít nhất ${result.need} tin${
+            result.channelId ? ` ở <#${result.channelId}>` : ""
+          } hôm nay mới tham gia được (hiện đã nhắn ${result.have}).`
         };
         return interaction.reply({
           content: messages[result.reason] || "Có lỗi xảy ra.",
@@ -212,6 +214,8 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
       const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
       const requiredRole = interaction.options.getRole("required_role");
       const requiredMessages = interaction.options.getInteger("required_messages");
+      const requiredMessageChannel = interaction.options.getChannel("required_message_channel");
+      const noReqRole = interaction.options.getRole("no_req_role");
       const thumbnail = interaction.options.getString("thumbnail");
       const image = interaction.options.getString("image");
       const colorInput = interaction.options.getString("color");
@@ -248,6 +252,8 @@ Lượt tạo ảnh còn lại hôm nay: ${imageQuota.remaining === Infinity ? "
         hostId: interaction.user.id,
         requiredRoleId: requiredRole?.id || null,
         requiredDailyMessages: requiredMessages || null,
+        requiredMessageChannelId: requiredMessageChannel?.id || null,
+        noReqRoleId: noReqRole?.id || null,
         thumbnail,
         image,
         color,

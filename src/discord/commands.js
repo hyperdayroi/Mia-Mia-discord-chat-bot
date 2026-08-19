@@ -80,6 +80,19 @@ export const commands = [
             .setMinValue(1)
             .setRequired(false)
         )
+        .addChannelOption(o =>
+          o
+            .setName("required_message_channel")
+            .setDescription("Chỉ tính tin nhắn ở kênh này cho required_messages (để trống = tính cả server)")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(false)
+        )
+        .addRoleOption(o =>
+          o
+            .setName("no_req_role")
+            .setDescription("Role được MIỄN hết mọi điều kiện ở trên (tuỳ chọn)")
+            .setRequired(false)
+        )
         .addStringOption(o =>
           o.setName("thumbnail").setDescription("URL ảnh nhỏ góc phải embed (tuỳ chọn)").setRequired(false)
         )
