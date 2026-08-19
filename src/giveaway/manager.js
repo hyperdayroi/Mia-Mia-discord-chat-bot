@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { createGiveaway, getGiveaway, updateGiveaway, getActiveGiveaways, addEntry } from "../core/giveawayStore.js";
-import { getDailyMessageCount } from "../core/dailyMessageStore.js";
+import { getDailyMessageCount, getDailyMessageCountInChannel } from "../core/dailyMessageStore.js";
 
 let discordClient = null;
 
@@ -14,7 +14,11 @@ export function initGiveawayManager(client) {
 function buildRequirementLines(giveaway) {
   const lines = [];
   if (giveaway.requiredRoleId) lines.push(`Cần có role <@&${giveaway.requiredRoleId}>`);
-  if (giveaway.requiredDailyMessages) lines.push(`Cần nhắn ít nhất **${giveaway.requiredDailyMessages}** tin hôm nay`);
+  if (giveaway.requiredDailyMessages) {
+    const where = giveaway.requiredMessageChannelId ? `ở <#${giveaway.requiredMessageChannelId}>` : "";
+    lines.push(`Cần nhắn ít nhất **${giveaway.requiredDailyMessages}** tin ${where} hôm nay`.replace(/\s+/g, " ").trim());
+  }
+  if (giveaway.noReqRoleId) lines.push(`*(role <@&${giveaway.noReqRoleId}> được miễn hết điều kiện trên)*`);
   return lines;
 }
 
@@ -117,6 +121,8 @@ function buildActionRow(giveaway, disabled = false) {
  * @param {string} params.hostId
  * @param {string} [params.requiredRoleId]
  * @param {number} [params.requiredDailyMessages]
+ * @param {string} [params.requiredMessageChannelId] - Chỉ đếm tin nhắn trong kênh này (không set = tính cả server)
+ * @param {string} [params.noReqRoleId] - Role có role này được MIỄN mọi điều kiện ở trên
  * @param {string} [params.thumbnail] - URL ảnh nhỏ góc phải embed
  * @param {string} [params.image] - URL ảnh lớn cuối embed
  * @param {number} [params.color] - Màu embed dạng số hex (0xRRGGBB)
@@ -130,6 +136,8 @@ export async function createGiveawayFlow({
   hostId,
   requiredRoleId = null,
   requiredDailyMessages = null,
+  requiredMessageChannelId = null,
+  noReqRoleId = null,
   thumbnail = null,
   image = null,
   color = null,
@@ -147,6 +155,8 @@ export async function createGiveawayFlow({
     guildId: channel.guildId,
     requiredRoleId,
     requiredDailyMessages,
+    requiredMessageChannelId,
+    noReqRoleId,
     thumbnail,
     image,
     color,
@@ -233,7 +243,7 @@ export async function rerollGiveaway(id) {
 /**
  * @param {string} giveawayId
  * @param {import("discord.js").GuildMember} member
- * @returns {{ ok: boolean, reason?: "already"|"ended"|"not_found"|"missing_role"|"not_enough_messages", need?: number, have?: number }}
+ * @returns {{ ok: boolean, reason?: "already"|"ended"|"not_found"|"missing_role"|"not_enough_messages", need?: number, have?: number, channelId?: string }}
  */
 export function handleJoin(giveawayId, member) {
   const giveaway = getGiveaway(giveawayId);
@@ -241,16 +251,30 @@ export function handleJoin(giveawayId, member) {
   if (giveaway.ended) return { ok: false, reason: "ended" };
   if (giveaway.entries.includes(member.id)) return { ok: false, reason: "already" };
 
-  // Nếu có set required_role thì ƯU TIÊN kiểm tra role, BỎ QUA điều kiện tin nhắn
-  // (2 điều kiện không cộng dồn — set role thì khỏi cần đủ tin nhắn nữa).
-  if (giveaway.requiredRoleId) {
-    if (!member.roles?.cache?.has(giveaway.requiredRoleId)) {
-      return { ok: false, reason: "missing_role" };
-    }
-  } else if (giveaway.requiredDailyMessages) {
-    const have = getDailyMessageCount(giveaway.guildId, member.id);
-    if (have < giveaway.requiredDailyMessages) {
-      return { ok: false, reason: "not_enough_messages", need: giveaway.requiredDailyMessages, have };
+  // Role "miễn req" — có role này thì bỏ qua HẾT mọi điều kiện bên dưới.
+  const isExempt = giveaway.noReqRoleId && member.roles?.cache?.has(giveaway.noReqRoleId);
+
+  if (!isExempt) {
+    // Nếu có set required_role thì ƯU TIÊN kiểm tra role, BỎ QUA điều kiện tin nhắn
+    // (2 điều kiện không cộng dồn — set role thì khỏi cần đủ tin nhắn nữa).
+    if (giveaway.requiredRoleId) {
+      if (!member.roles?.cache?.has(giveaway.requiredRoleId)) {
+        return { ok: false, reason: "missing_role" };
+      }
+    } else if (giveaway.requiredDailyMessages) {
+      const have = giveaway.requiredMessageChannelId
+        ? getDailyMessageCountInChannel(giveaway.guildId, giveaway.requiredMessageChannelId, member.id)
+        : getDailyMessageCount(giveaway.guildId, member.id);
+
+      if (have < giveaway.requiredDailyMessages) {
+        return {
+          ok: false,
+          reason: "not_enough_messages",
+          need: giveaway.requiredDailyMessages,
+          have,
+          channelId: giveaway.requiredMessageChannelId || null
+        };
+      }
     }
   }
 
