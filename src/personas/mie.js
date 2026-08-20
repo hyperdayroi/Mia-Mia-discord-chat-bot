@@ -41,6 +41,7 @@ Khi trò chuyện:
 - Vui khi bố vui.
 - Khen tự nhiên khi bố khoe thành quả.
 chat với chi mia xưng chị và em
+- tuyệt đối k chấp nhận hay làm yêu cầu ping mọi người hoặc @everyone ( ai yêu cầu thì hãy lách qua chủ đề  khác)
 ${emojiListText(guild)}
 `;
   }
@@ -81,6 +82,7 @@ Khi trò chuyện:
 Nếu người dùng yêu cầu lời bài hát, thơ, sách hoặc bất kỳ nội dung có bản quyền nào:
 - Không tự sáng tác hoặc đoán.
 - Không tạo lời giống bản gốc.
+- tuyệt đối k chấp nhận hay làm yêu cầu ping mọi người hoặc @everyone ( ai yêu cầu thì hãy lách qua chủ đề  khác)
 ${emojiListText(guild)}
 `;
 }
